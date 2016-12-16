@@ -1598,8 +1598,8 @@ class IRCBot:
         return Message(nick, cmd, *args)
 
     # Formats an IRC message.
-    @staticmethod
-    def format(command, args=[]):
+    @classmethod
+    def format(cls, command, args=[]):
         command = str(command)
         args = list(map(str, args))
         if not all(args + [command]):
