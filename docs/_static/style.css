@@ -1,0 +1,64 @@
+/* Copyright (C) 2015-2016 taylor.fish <contact@taylor.fish>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Modifications to alabaster. */
+
+@media screen and (max-width: 875px) {
+    div.sphinxsidebar {
+        width: auto;
+    }
+}
+
+div.sphinxsidebar #searchbox input[type="text"] {
+    width: 140px;
+}
+
+div.sphinxsidebar #searchbox form.search > div {
+    display: inline-block;
+}
+
+.admonition code.xref {
+    background-color: transparent;
+    border-bottom: none;
+}
+
+table.docutils.field-list th {
+    white-space: nowrap;
+}
+
+td.field-body > p.first {
+    margin-bottom: 0;
+}
+
+div.admonition p.admonition-title {
+    display: block;
+    margin-bottom: 0.7em;
+    margin-top: 0.2em !important;
+}
+
+/* ":func:`print`" generates HTML with the class "xref", but
+ * ":func:`python:print`" doesn't, even when they both link to
+ * the same function.
+ *
+ * Add styling from "xref" to object references that are missing the class.
+ */
+a.reference.external code.docutils.literal {
+    border-bottom: 1px solid #ffffff;
+    background-color: #fbfbfb;
+}
+
+a.reference.external code.docutils.literal:hover {
+    background-color: #eeeeee;
+}

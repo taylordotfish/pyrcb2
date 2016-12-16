@@ -1,0 +1,50 @@
+pyrcb2 is licensed under the GNU Lesser General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version. See "licenses/LGPL-3.0"
+or <http://www.gnu.org/licenses/> for a copy of the license.
+
+As an additional permission under GNU GPL version 3 section 7, you may
+distribute non-source forms of comments (lines beginning with "#") and
+strings (text enclosed in quotation marks) in pyrcb2 source code without
+the copy of the GNU GPL normally required by section 4, provided you
+include a URL through which recipients can obtain a copy of the
+Corresponding Source and the GPL at no charge.
+
+
+Files under "docs/" are part of pyrcb2-docs, documentation for pyrcb2.
+pyrcb2-docs is licensed under the GNU Lesser General Public License
+as published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version. See "licenses/LGPL-3.0"
+or <http://www.gnu.org/licenses/> for a copy of the license.
+
+As an additional permission under GNU GPL version 3 section 7, you
+may distribute non-source forms of pyrcb2-docs without the copy of
+the GNU GPL normally required by section 4, provided you include a
+URL through which recipients can obtain a copy of the Corresponding
+Source and the GPL at no charge.
+
+
+The files "pyrcb2/astdio.py" and "docs/reference/astdio.rst" have
+been released to the public domain. See "licenses/CC0-1.0" or
+<http://creativecommons.org/publicdomain/zero/1.0/> for a copy
+of the CC0 Public Domain Dedication.
+
+Files under "docs/_static/" are licensed under the
+Apache License, Version 2.0. See "licenses/APACHE-2.0" or
+<http://www.apache.org/licenses/LICENSE-2.0> for a copy of
+the license.
+
+Files under "examples/" have been released to the public domain. See
+"licenses/CC0-1.0" or <http://creativecommons.org/publicdomain/zero/1.0/>
+for a copy of the CC0 Public Domain Dedication.
+
+The files "README.rst" and "misc/pypi-description.rst" have
+been released to the public domain. See "licenses/CC0-1.0" or
+<http://creativecommons.org/publicdomain/zero/1.0/> for a copy
+of the CC0 Public Domain Dedication.
+
+The file "scripts/bump-version.py" is licensed under the GNU General
+Public License as published by the Free Software Foundation, either
+version 3 of the License or (at your option) any later version. See
+"licenses/GPL-3.0" or <http://www.gnu.org/licenses/> for a copy of the
+license.
