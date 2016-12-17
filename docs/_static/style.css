@@ -29,9 +29,9 @@ div.sphinxsidebar #searchbox form.search > div {
     display: inline-block;
 }
 
-.admonition code.xref {
+div.admonition code.xref {
     background-color: transparent;
-    border-bottom: none;
+    border-bottom-color: #eeeeee;
 }
 
 table.docutils.field-list th {
