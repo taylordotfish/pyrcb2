@@ -1,5 +1,5 @@
 # This example bot corresponds to the "Getting started" guide at
-# <https://pyrcb2.readthedocs.io/getting-started.html>.
+# <https://pythonhosted.org/pyrcb2/getting-started.html>.
 #
 # To the extent possible under law, the author(s) have dedicated all
 # copyright and neighboring rights to this software to the public domain

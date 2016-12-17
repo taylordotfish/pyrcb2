@@ -49,12 +49,12 @@ You can use the ``--user`` option to install to your home directory instead.
 Documentation
 -------------
 
-Documentation for pyrcb2 is available at `https://pyrcb2.readthedocs.io/`__. If
-you're new to pyrcb2, start with `this guide`_ and take a look at the
+Documentation for pyrcb2 is available at `https://pythonhosted.org/pyrcb2/`__.
+If you're new to pyrcb2, start with `this guide`_ and take a look at the
 `examples`_.
 
-__ https://pyrcb2.readthedocs.io/en/stable/
-.. _this guide: https://pyrcb2.readthedocs.io/en/stable/getting-started.html
+__ https://pythonhosted.org/pyrcb2/
+.. _this guide: https://pythonhosted.org/pyrcb2/getting-started.html
 .. _examples: https://github.com/taylordotfish/pyrcb2/tree/stable/examples/
 
 
