@@ -51,17 +51,17 @@ You can use the ``--user`` option to install to your home directory instead.
 Documentation
 -------------
 
-Documentation for pyrcb2 is available at `https://pyrcb2.readthedocs.io/`__. If
-you're new to pyrcb2, start with `this guide`_ and take a look at the
+Documentation for pyrcb2 is available at `https://pythonhosted.org/pyrcb2/`__.
+If you're new to pyrcb2, start with `this guide`_ and take a look at the
 `examples <examples/>`_.
 
-__ https://pyrcb2.readthedocs.io/en/0.1/
-.. _this guide: https://pyrcb2.readthedocs.io/en/0.1/getting-started.html
+__ https://pythonhosted.org/pyrcb2/
+.. _this guide: https://pythonhosted.org/pyrcb2/getting-started.html
 
 This branch contains pyrcb2 version **0.1.1**.
 See the `changelog`_ for information about this version.
 
-.. _changelog: https://pyrcb2.readthedocs.io/en/0.1/release-notes/0.1.html
+.. _changelog: https://pythonhosted.org/pyrcb2/release-notes/0.1.html
 
 
 Tests
