@@ -1254,8 +1254,8 @@ class IRCBot:
         self._first_use = False
 
         self.server_address = "{}:{}".format(hostname, port)
-        reader, writer = await asyncio.open_connection(hostname, port, ssl=ssl)
-        self.reader, self.writer = reader, writer
+        self.reader, self.writer = await asyncio.open_connection(
+            hostname, port, loop=self.loop, ssl=ssl)
         self.is_alive = True
         self.connected.set()
         if extensions:

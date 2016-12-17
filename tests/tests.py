@@ -521,7 +521,8 @@ class TestConnect(BaseBotTest):
         self.bot.connect("irc.example.com", 6667)
         self.assertTrue(self.bot.is_alive)
         self.assertCalledOnce(
-            asyncio.open_connection, "irc.example.com", 6667, ssl=False)
+            asyncio.open_connection, "irc.example.com", 6667,
+            loop=self.loop, ssl=False)
         self.assertSent(
             "CAP REQ :multi-prefix", "CAP REQ :account-notify", "CAP :END",
         )
@@ -531,7 +532,8 @@ class TestConnect(BaseBotTest):
         await self.bot.connect("irc.example.com", 6667)
         self.assertTrue(self.bot.is_alive)
         self.assertCalledOnce(
-            asyncio.open_connection, "irc.example.com", 6667, ssl=False)
+            asyncio.open_connection, "irc.example.com", 6667,
+            loop=self.loop, ssl=False)
         self.assertSent(
             "CAP REQ :multi-prefix", "CAP REQ :account-notify", "CAP :END",
         )
@@ -539,13 +541,15 @@ class TestConnect(BaseBotTest):
     def test_connect_ssl(self):
         self.bot.connect("irc.example.com", 6697, ssl=True)
         self.assertCalledOnce(
-            asyncio.open_connection, "irc.example.com", 6697, ssl=True,
+            asyncio.open_connection, "irc.example.com", 6697,
+            loop=self.loop, ssl=True,
         )
 
     async def test_connect_no_extensions(self):
         await self.bot.connect("irc.example.com", 6667, extensions=False)
         self.assertCalledOnce(
-            asyncio.open_connection, "irc.example.com", 6667, ssl=False)
+            asyncio.open_connection, "irc.example.com", 6667,
+            loop=self.loop, ssl=False)
         self.assertSent()  # Nothing should have been sent.
 
     def test_register(self):
