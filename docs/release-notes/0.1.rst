@@ -26,6 +26,14 @@ Version 0.1
 Changelog
 ---------
 
+.. _changelog-0.1.3:
+
+0.1.3
+~~~~~
+
+* Fixed a bug where the default event loop would always be used when
+  connecting (even when a different loop was specified).
+
 .. _changelog-0.1.2:
 
 0.1.2
