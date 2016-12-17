@@ -26,6 +26,14 @@ Version 0.1
 Changelog
 ---------
 
+.. _changelog-0.1.2:
+
+0.1.2
+~~~~~
+
+* Moved documentation to `<https://pythonhosted.org/>`_, since Read the Docs
+  doesn't support Python 3.5.
+
 .. _changelog-0.1.1:
 
 0.1.1
