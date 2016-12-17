@@ -287,7 +287,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'pyrcb2', 'pyrcb2 Documentation',
-     author, 'pyrcb2', 'One line description of project.',
+     author, 'pyrcb2', 'An asyncio-based IRC bot library.',
      'Miscellaneous'),
 ]
 
