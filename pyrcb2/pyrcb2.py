@@ -1340,7 +1340,7 @@ class IRCBot:
             # the next message.
             await self.wait_for_events_called()
             if message is None:
-                await self.ensure_future(cleanup())
+                await cleanup()
                 return
             read_message = self.ensure_future(read_message_coro)
             self.listen_futures.add(read_message)
