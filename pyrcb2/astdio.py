@@ -50,6 +50,8 @@ import weakref
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures.thread import _worker
 
+__all__ = ["input", "print"]
+
 
 class DaemonThreadPoolExecutor(ThreadPoolExecutor):
     """A version of `~concurrent.futures.ThreadPoolExecutor` that doesn't
