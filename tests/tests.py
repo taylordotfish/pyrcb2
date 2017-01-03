@@ -26,7 +26,7 @@ from .mocks import MockClock, MockAsyncSleep
 from .mocks import MockOpenConnection, MockReader, MockWriter
 from .utils import async_tests, mock_event
 
-from pyrcb2 import IRCBot, Event, IStr, ISet, IDict, Message, astdio
+from pyrcb2 import IRCBot, Event, IStr, ISet, IDict, Message, WaitError, astdio
 from pyrcb2.itypes import Sender
 import pyrcb2.pyrcb2
 import pyrcb2.utils
@@ -524,7 +524,7 @@ class TestConnect(BaseBotTest):
             asyncio.open_connection, "irc.example.com", 6667,
             loop=self.loop, ssl=False)
         self.assertSent(
-            "CAP REQ :multi-prefix", "CAP REQ :account-notify", "CAP :END",
+            "CAP REQ :multi-prefix", "CAP REQ :account-notify",
         )
 
     async def test_connect_async(self):
@@ -535,7 +535,7 @@ class TestConnect(BaseBotTest):
             asyncio.open_connection, "irc.example.com", 6667,
             loop=self.loop, ssl=False)
         self.assertSent(
-            "CAP REQ :multi-prefix", "CAP REQ :account-notify", "CAP :END",
+            "CAP REQ :multi-prefix", "CAP REQ :account-notify",
         )
 
     def test_connect_ssl(self):
@@ -552,12 +552,37 @@ class TestConnect(BaseBotTest):
             loop=self.loop, ssl=False)
         self.assertSent()  # Nothing should have been sent.
 
+    def test_sasl_auth(self):
+        self.bot.connect("irc.example.com", 6667, extensions=False)
+        self.clear_sent()
+        self.from_server(
+            ":server CAP * ACK :sasl",
+            ":server AUTHENTICATE :+",
+            ":server 903 * :SASL authentication successful")
+        self.bot.sasl_auth("account", "password")
+        self.assertSent(
+            "CAP REQ :sasl",
+            "AUTHENTICATE :PLAIN",
+            "AUTHENTICATE :YWNjb3VudABhY2NvdW50AHBhc3N3b3Jk")
+        self.bot.close_connection()
+        self.bot.listen()
+
+    async def test_sasl_auth_fail(self):
+        await self.bot.connect("irc.example.com", 6667, extensions=False)
+        self.clear_sent()
+        self.from_server(
+            ":server CAP * ACK :sasl",
+            ":server AUTHENTICATE :+",
+            ":server 904 * :SASL authentication failed")
+        with self.assertRaises(WaitError):
+            await self.bot.sasl_auth("account", "password")
+
     def test_register(self):
         self.bot.connect("irc.example.com", 6667)
         self.clear_sent()
         self.from_server(":server 001 self1 :Welcome")
         self.bot.register("self1")
-        self.assertSent("NICK :self1", "USER self1 8 * :self1")
+        self.assertSent("CAP :END", "NICK :self1", "USER self1 8 * :self1")
         self.bot.close_connection()
         self.bot.listen()
 
@@ -565,12 +590,12 @@ class TestConnect(BaseBotTest):
         await self.connect_bot()
         self.from_server(":server 001 self1 :Welcome")
         await self.bot.register("self1", "realname", "user1", mode="0")
-        self.assertSent("NICK :self1", "USER user1 0 * :realname")
+        self.assertSent("CAP :END", "NICK :self1", "USER user1 0 * :realname")
 
     async def test_register_nickname_in_use(self):
         await self.connect_bot()
         self.from_server(":server 433 * self1 :Nickname in use")
-        with self.assertRaises(ValueError):
+        with self.assertRaises(WaitError):
             await self.bot.register("self1")
 
     async def test_register_lost_connection(self):
