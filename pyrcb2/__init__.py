@@ -37,7 +37,7 @@ from . import messages
 from . import numerics
 from . import utils
 
-__version__ = "0.2.0-dev"
+__version__ = "0.2.0"
 
 # Silence Pyflakes warnings about unused imports.
 assert [Status]
