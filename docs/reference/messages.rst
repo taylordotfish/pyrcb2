@@ -41,6 +41,14 @@ Reply
 .. autoclass:: Reply
 
 
+Error
+-----
+
+.. class:: Error
+
+   An alias to `Reply`.
+
+
 Special message components
 --------------------------
 
