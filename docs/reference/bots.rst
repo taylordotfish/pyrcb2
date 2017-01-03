@@ -77,6 +77,7 @@ Initialization
 
 .. automethod:: IRCBot.load_events
 .. automethod:: IRCBot.connect
+.. automethod:: IRCBot.sasl_auth
 .. automethod:: IRCBot.register
 .. automethod:: IRCBot.call_coroutine
 .. automethod:: IRCBot.schedule_coroutine

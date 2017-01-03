@@ -187,6 +187,15 @@ replies = {
     "492": "ERR_NOSERVICEHOST",
     "501": "ERR_UMODEUNKNOWNFLAG",
     "502": "ERR_USERSDONTMATCH",
+    "900": "RPL_LOGGEDIN",
+    "901": "RPL_LOGGEDOUT",
+    "902": "ERR_NICKLOCKED",
+    "903": "RPL_SASLSUCCESS",
+    "904": "ERR_SASLFAIL",
+    "905": "ERR_SASLTOOLONG",
+    "906": "ERR_SASLABORTED",
+    "907": "ERR_SASLALREADY",
+    "908": "RPL_SASLMECHS",
 }
 
 codes = {name: code for code, name in replies.items()}

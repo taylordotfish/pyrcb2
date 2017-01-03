@@ -29,6 +29,7 @@ from .itypes import IStr, IDict, IDefaultDict, ISet, User, Sender
 from .messages import (
     Message, Reply, Error, ANY, ANY_ARGS, SELF, matches_pattern,
     matches_any_pattern, WaitResult, WaitError, WhoisReply)
+from .sasl import SASL
 from .utils import (
     ensure_list, ensure_coroutine_obj, cancel_future, cancel_futures,
     cancel_tasks, gather, optargs, get_argument_info, OptionalCoroutine,
@@ -77,6 +78,7 @@ class IRCBot:
         self.logger = None
         self.set_up_logging(log_communication, log_debug, log_kwargs)
         self.account_tracker = AccountTracker(self)
+        self.sasl = SASL(self)
         self.load_events(self)
         self.load_events(self.account_tracker)
 
@@ -1263,6 +1265,10 @@ class IRCBot:
             self.cap_req("multi-prefix")
             self.cap_req("account-notify")
 
+    async def sasl_auth_async(
+            self, account=None, password=None, mechanism="PLAIN", **kwargs):
+        await self.sasl.authenticate(account, password, mechanism, **kwargs)
+
     async def register_async(
             self, nickname, realname=None, username=None,
             password=None, mode="8", end_cap=True):
@@ -1437,6 +1443,34 @@ class IRCBot:
             return coroutine
         self.run_until_complete(coroutine)
 
+    def sasl_auth(
+            self, account=None, password=None, mechanism="PLAIN", **kwargs):
+        """Authenticate (log in to an account) using SASL. The IRCv3 extension
+        ``sasl`` must be supported by the server.
+
+        This method should be called after :meth:`connect`, but before
+        :meth:`register`.
+
+        This method can be used synchronously or asynchronously. When called
+        from a coroutine, it must be awaited.
+
+        :param str account: The account to log in to.
+        :param str password: The password for the account.
+        :param str mechanism: The SASL mechanism to use. Currently, "PLAIN" is
+          the only supported mechanism.
+        :param kwargs: Keyword arguments to be used by the specified SASL
+          mechanism. Some SASL mechanisms may need arguments other than
+          ``account`` and ``password``.
+        :returns: A coroutine if the method was called from another coroutine.
+          Otherwise, this method will block.
+        :raises WaitError: if authentication fails.
+        """
+        coroutine = self.sasl_auth_async(
+            account, password, mechanism, **kwargs)
+        if asyncio.Task.current_task(loop=self.loop) is not None:
+            return coroutine
+        self.run_with_listen(coroutine)
+
     def register(self, nickname, realname=None, username=None,
                  password=None, mode="8", end_cap=True):
         """Registers with the server. (Sends the ``NICK`` and ``USER``
@@ -1456,7 +1490,9 @@ class IRCBot:
         :param str username: The username to use. If not specified,
           ``nickname`` will be used.
         :param str password: If specified, a ``PASS`` message will be sent with
-          the given password. This can be used to log in to accounts.
+          the given password. This can be used to log in to accounts on many
+          servers; however, if SASL is supported, it is better to use
+          :meth:`sasl_auth`.
         :param str mode: The mode to use when sending the ``USER`` message.
         :param bool end_cap: Whether or not to end IRCv3 capability negotiation
           by sending a ``CAP END`` message. If any ``CAP LS`` or ``CAP REQ``
