@@ -20,9 +20,12 @@
 .. You should have received a copy of the GNU Lesser General Public License
    along with pyrcb2-docs.  If not, see <http://www.gnu.org/licenses/>.
 
+.. currentmodule:: pyrcb2
+
 Release notes
 =============
 
 .. toctree::
 
+   0.2
    0.1
