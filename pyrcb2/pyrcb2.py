@@ -1288,12 +1288,7 @@ class IRCBot:
         if not result.success:
             if result.error is None:
                 raise ConnectionError("Lost connection to the server.")
-            sender, code, target, *args = result.error
-            reply = numerics.replies[code]
-            message = ""
-            if args:
-                message = ": {} :{}".format(" ".join(args[:-1]), args[-1])
-            raise ValueError("{}{}".format(reply, message))
+            raise WaitError(result, "Could not register")
 
     async def _listen_async(self):
         await self.connected.wait()
@@ -1455,7 +1450,7 @@ class IRCBot:
         This method can be used synchronously or asynchronously. When called
         from a coroutine, it must be awaited.
 
-        :param str nickname: The nickname to use. A `ValueError` is raised if
+        :param str nickname: The nickname to use. A `WaitError` is raised if
           the nickname is already in use.
         :param str realname: The real name to use. If not specified,
           ``nickname`` will be used.
@@ -1466,6 +1461,7 @@ class IRCBot:
         :param str mode: The mode to use when sending the ``USER`` message.
         :returns: A coroutine if this method was called from another coroutine.
           Otherwise, this method will block.
+        :raises WaitError: if the nickname is already in use.
         """
         coroutine = self.register_async(
             nickname, realname, username, password, mode)
