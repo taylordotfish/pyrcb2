@@ -306,6 +306,22 @@ class WaitResult:
         :type: `list` of `Message`
         """
 
+    def to_exception(self, *args, **kwargs):
+        """Returns an exception that represents this object. If `error_cause`
+        is "disconnected", a `ConnectionError` is returned. Otherwise, a
+        `WaitError` is returned.
+
+        Arguments passed to this method are forwarded to `WaitError`'s
+        constructor. The first argument to `WaitResult` is always this object.
+
+        :rtype: `ConnectionError` or `WaitError`
+        """
+        if self.success:
+            raise ValueError("This WaitResult is successful.")
+        if self.error_cause == "disconnected":
+            return ConnectionError("Lost connection to the server.")
+        return WaitError(self, *args, **kwargs)
+
 
 class MultiWaitResult(WaitResult):
     """
@@ -355,6 +371,8 @@ class WaitError(Exception):
 
     Exceptions of this type correspond to unsuccessful `WaitResult` objects,
     which can be accessed with the `result` attribute.
+
+    Also see :meth:`WaitResult.to_exception`.
 
     :param WaitResult wait_result: The `WaitResult` associated with this
       exception. The exception's message is generated from this parameter.

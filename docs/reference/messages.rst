@@ -99,6 +99,7 @@ WaitResult
    .. autoattribute:: error
    .. autoattribute:: error_cause
    .. autoattribute:: messages
+   .. automethod:: to_exception
 
 
 MultiWaitResult

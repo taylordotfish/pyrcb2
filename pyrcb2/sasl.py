@@ -22,7 +22,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with pyrcb2.  If not, see <http://www.gnu.org/licenses/>.
 
-from .messages import Message, Reply, Error, ANY, ANY_ARGS, WaitError
+from .messages import Message, Reply, Error, ANY, ANY_ARGS
 from base64 import b64encode
 from collections import OrderedDict
 
@@ -57,7 +57,8 @@ class SASL:
     async def enable_sasl(self):
         result = await self.bot.cap_req("sasl")
         if not result.success:
-            raise WaitError(result, "Could not enable IRCv3 'sasl' extension")
+            raise result.to_exception(
+                "Could not enable IRCv3 'sasl' extension")
 
     async def start_authentication(self, mechanism):
         await self.bot.send_command("AUTHENTICATE", mechanism)
@@ -73,7 +74,7 @@ class SASL:
         )
 
         if not result.success:
-            raise WaitError(result, "Could not begin authentication")
+            raise result.to_exception("Could not begin authentication")
 
     async def complete_authentication(self):
         result = await self.bot.wait_for(
@@ -85,7 +86,7 @@ class SASL:
         )
 
         if not result.success:
-            raise WaitError(result, "Could not complete authentication")
+            raise result.to_exception("Could not complete authentication")
 
     async def plain(self, account, password):
         auth_str = "{0}\0{0}\0{1}".format(account, password)

@@ -28,7 +28,7 @@ from .events import Event
 from .itypes import IStr, IDict, IDefaultDict, ISet, User, Sender
 from .messages import (
     Message, Reply, Error, ANY, ANY_ARGS, SELF, matches_pattern,
-    matches_any_pattern, WaitResult, WaitError, WhoisReply)
+    matches_any_pattern, WaitResult, WhoisReply)
 from .sasl import SASL
 from .utils import (
     ensure_list, ensure_coroutine_obj, cancel_future, cancel_futures,
@@ -1291,9 +1291,7 @@ class IRCBot:
         )
 
         if not result.success:
-            if result.error is None:
-                raise ConnectionError("Lost connection to the server.")
-            raise WaitError(result, "Could not register")
+            raise result.to_exception("Could not register.")
 
     async def _listen_async(self):
         await self.connected.wait()
