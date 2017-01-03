@@ -114,16 +114,29 @@ class TestAccountTracker(BaseBotTest):
         for user in ["user1", "user2", "user3"]:
             self.assertTrue(self.bot.is_account_synced(user))
 
-    async def test_accounts_channel_whox(self):
+    async def _test_accounts_channel_whox(self, whox_accounts):
         await self.from_server(":server 005 self WHOX :supported")
         await self.join_channel()
-        self.from_server(*WHOX_ACCOUNTS)
+        self.from_server(*whox_accounts)
         result = await self.bot.get_accounts("#channel")
         self.assertSuccess(result)
         self.assertEqual(result.value, {
             "user1": "Acc1", "user2": "Acc2", "user3": "Acc3"})
         for user in ["user1", "user2", "user3"]:
             self.assertTrue(self.bot.is_account_synced(user))
+
+    async def test_accounts_channel_whox(self):
+        await self._test_accounts_channel_whox(WHOX_ACCOUNTS)
+
+    async def test_custom_whox_query_type(self):
+        with self.assertRaises(TypeError):
+            self.bot.whox_query_type = []
+        with self.assertRaises(ValueError):
+            self.bot.whox_query_type = 1234
+        self.bot.whox_query_type = 123
+        await self._test_accounts_channel_whox(
+            [line.replace("999", "123") for line in WHOX_ACCOUNTS],
+        )
 
     async def test_auto_account_tracking(self):
         self.bot.track_accounts = True
