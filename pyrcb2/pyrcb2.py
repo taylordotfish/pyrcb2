@@ -628,9 +628,8 @@ class IRCBot:
     @Event.command("CAP")
     def on_cap(self, sender, target, subcommand: IStr, *args):
         if subcommand == "ACK":
-            # Some IRC servers add a trailing space after the extension name.
-            extension = args[0].strip()
-            self.extensions.add(extension)
+            extensions = set(args[0].split())
+            self.extensions |= extensions
 
     @Event.reply("RPL_WELCOME")
     def on_welcome(self, sender, target: IStr, *args):
