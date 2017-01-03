@@ -25,10 +25,11 @@
 from .decorators import cast_args, document_attr
 from .itypes import IStr
 from .utils import Sentinel, reply_name_to_command
+from . import numerics
 
 __all__ = ["ANY", "ANY_ARGS", "SELF", "Message", "Reply", "matches_pattern",
            "matches_any_pattern", "WaitResult", "MultiWaitResult",
-           "WhoisReply"]
+           "WaitError", "WhoisReply"]
 
 # Used in message patterns to match any argument (including no argument).
 ANY = None
@@ -344,13 +345,63 @@ class MultiWaitResult(WaitResult):
         """
 
 
+class WaitError(Exception):
+    """Raised when an erroneous response to an IRC command is received and an
+    exception should be generated, rather than returning an unsuccessful
+    `WaitResult`.
+
+    Some methods, such as :meth:`IRCBot.register` and :meth:`IRCBot.sasl_auth`,
+    raise this exception when errors are encountered.
+
+    Exceptions of this type correspond to unsuccessful `WaitResult` objects,
+    which can be accessed with the `result` attribute.
+
+    :param WaitResult wait_result: The `WaitResult` associated with this
+      exception. The exception's message is generated from this parameter.
+    :param str prefix: An optional prefix to be placed before the
+      automatically-generated exception message.
+    :param str message: If provided, this parameter will be used as the
+      exception's message instead of generating one from the `WaitResult`.
+    """
+    def __init__(self, wait_result, prefix=None, message=None):
+        self.result = wait_result
+        if message is not None:
+            super().__init__(message)
+            return
+
+        if wait_result.error_cause != "message":
+            super().__init__("Error cause: %s" % wait_result.error_cause)
+            return
+
+        sender, command, *args = wait_result.error
+        exc_message = prefix + ": " if prefix else ""
+
+        if command in numerics.replies:
+            exc_message += numerics.replies[command] + ": "
+        if sender:
+            exc_message += ":" + sender + " "
+        exc_message += command
+        if len(args) > 1:
+            exc_message += " " + " ".join(args[:-1])
+        if args:
+            exc_message += " :" + args[-1]
+        super().__init__(exc_message)
+
+    @document_attr
+    def result(self):
+        """The `WaitResult` associated with this exception. This object
+        provides details about the type and cause of the error.
+
+        :type: `WaitResult`
+        """
+
+
 class WhoisReply:
     """Represents the reply to a WHOIS query.
 
     :meth:`IRCBot.whois` returns an object of this type (as the ``value``
     attribute of a `WaitResult`).
     """
-
     def __init__(self):
         self.nickname = None
         self.username = None

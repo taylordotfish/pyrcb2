@@ -28,7 +28,7 @@ from .events import Event
 from .itypes import IStr, IDict, IDefaultDict, ISet, User, Sender
 from .messages import (
     Message, Reply, Error, ANY, ANY_ARGS, SELF, matches_pattern,
-    matches_any_pattern, WaitResult, WhoisReply)
+    matches_any_pattern, WaitResult, WaitError, WhoisReply)
 from .utils import (
     ensure_list, ensure_coroutine_obj, cancel_future, cancel_futures,
     cancel_tasks, gather, optargs, get_argument_info, OptionalCoroutine,

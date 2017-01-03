@@ -101,6 +101,14 @@ MultiWaitResult
    .. autoattribute:: children
 
 
+WaitError
+---------
+
+.. autoclass:: WaitError
+
+   .. autoattribute:: result
+
+
 WhoisReply
 ----------
 
