@@ -628,6 +628,11 @@ class TestDelay(BaseBotTest):
             self.assertEqual(msg, expected_msg)
             self.assertAlmostEqual(msg_time, expected_time)
 
+        await asyncio.sleep(10, loop=self.loop)
+        self.assertIn("user1", self.bot.last_sent)
+        await self.bot.privmsg("user2", "Message")
+        self.assertNotIn("user1", self.bot.last_sent)
+
     async def test_delay(self):
         await asyncio.sleep(10, loop=self.loop)
         expected_time = time.monotonic()
