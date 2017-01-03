@@ -898,7 +898,9 @@ class IRCBot:
         """Requests an IRC extension. (``CAP REQ`` command)
 
         When calling this method before the bot has been registered, remember
-        to send a ``CAP END`` message.
+        to send a ``CAP END`` message, either by setting the ``end_cap``
+        parameter to ``True`` in :meth:`register` (the default), or by manually
+        sending the message.
 
         :param str extension: The extension to request.
         :returns: A coroutine that blocks until the extension has been enabled
@@ -1260,22 +1262,20 @@ class IRCBot:
         if extensions:
             self.cap_req("multi-prefix")
             self.cap_req("account-notify")
-            self.send_command("CAP", "END")
 
     async def register_async(
             self, nickname, realname=None, username=None,
-            password=None, mode="8"):
+            password=None, mode="8", end_cap=True):
         realname = realname or nickname
         username = username or nickname
         self.pending_username = username
 
-        futures = []
+        if end_cap:
+            await self.send_command("CAP", "END")
         if password:
-            futures.append(self.send_command("PASS", password))
-        await self.gather(*(futures + [
-            self.send_command("NICK", nickname),
-            self.send_command("USER", username, mode, "*", realname),
-        ]))
+            await self.send_command("PASS", password)
+        await self.send_command("NICK", nickname)
+        await self.send_command("USER", username, mode, "*", realname)
 
         result = await self.wait_for(
             Reply("RPL_WELCOME", ANY_ARGS), errors=Error({
@@ -1438,7 +1438,7 @@ class IRCBot:
         self.run_until_complete(coroutine)
 
     def register(self, nickname, realname=None, username=None,
-                 password=None, mode="8"):
+                 password=None, mode="8", end_cap=True):
         """Registers with the server. (Sends the ``NICK`` and ``USER``
         commands.)
 
@@ -1458,6 +1458,12 @@ class IRCBot:
         :param str password: If specified, a ``PASS`` message will be sent with
           the given password. This can be used to log in to accounts.
         :param str mode: The mode to use when sending the ``USER`` message.
+        :param bool end_cap: Whether or not to end IRCv3 capability negotiation
+          by sending a ``CAP END`` message. If any ``CAP LS`` or ``CAP REQ``
+          (requests IRCv3 extensions) messages have been sent, sending a ``CAP
+          END`` message is required, or registration will not complete. By
+          default, :meth:`connect` requests extensions and thus requires ``CAP
+          END`` to be sent.
         :returns: A coroutine if this method was called from another coroutine.
           Otherwise, this method will block.
         :raises WaitError: if the nickname is already in use.
