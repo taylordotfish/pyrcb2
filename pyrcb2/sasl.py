@@ -1,4 +1,4 @@
-# Copyright (C) 2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2017 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -34,7 +34,7 @@ class SASL:
         self.bot = bot
         self.logger = bot.logger.getChild("sasl")
         self.handlers = OrderedDict(
-            PLAIN=self.plain,
+            PLAIN=self.plain, EXTERNAL=self.external,
         )
 
     async def authenticate(self, account, password, mechanism, **kwargs):
@@ -92,3 +92,6 @@ class SASL:
         auth_str = "{0}\0{0}\0{1}".format(account, password)
         auth_str = b64encode(auth_str.encode()).decode()
         await self.bot.send_command("AUTHENTICATE", auth_str)
+
+    async def external(self):
+        await self.bot.send_command("AUTHENTICATE", "+")

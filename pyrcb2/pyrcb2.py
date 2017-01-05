@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2015-2017 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -41,6 +41,7 @@ from inspect import isawaitable
 import asyncio
 import heapq
 import logging
+import ssl as ssl_module
 import re
 import time
 
@@ -1251,10 +1252,20 @@ class IRCBot:
         """
         self.writer.close()
 
-    async def connect_async(self, hostname, port, ssl=False, extensions=True):
+    async def connect_async(
+            self, hostname, port, ssl=False, extensions=True,
+            client_cert=None):
         if not self._first_use:
             self.reset()
         self._first_use = False
+
+        if ssl:
+            if not isinstance(ssl, ssl_module.SSLContext):
+                ssl = ssl_module.create_default_context()
+            if isinstance(client_cert, str):
+                client_cert = (client_cert,)
+            if client_cert is not None:
+                ssl.load_cert_chain(*client_cert)
 
         self.server_address = "{}:{}".format(hostname, port)
         self.reader, self.writer = await asyncio.open_connection(
@@ -1421,7 +1432,9 @@ class IRCBot:
         if self.scheduled_futures:
             await self.gather(*self.scheduled_futures)
 
-    def connect(self, hostname, port, ssl=False, extensions=True):
+    def connect(
+            self, hostname, port, ssl=False, extensions=True,
+            client_cert=None):
         """Connects to an IRC server.
 
         This method can be used synchronously or asynchronously. When called
@@ -1429,14 +1442,22 @@ class IRCBot:
 
         :param str hostname: The hostname or IP address of the IRC server.
         :param str port: The port of the IRC server.
-        :param bool ssl: Whether to use SSL/TLS.
+        :param bool ssl: Whether to use SSL/TLS. This can also be an
+          `ssl.SSLContext` object, in which case it will be used instead of the
+          default context.
         :param bool extensions: If true, the bot will request some IRCv3
           extensions using the ``CAP REQ`` command. Currently, ``multi-prefix``
           and ``account-notify`` will be requested.
+        :param client_cert: A client SSL/TLS certificate to be used.
+          If this is a string, it is passed as the ``certfile`` argument to
+          :meth:`ssl.SSLContext.load_cert_chain`; otherwise, this should be
+          a tuple or list that contains the arguments to be passed to
+          :meth:`ssl.SSLContext.load_cert_chain`.
         :returns: A coroutine if this method was called from another coroutine.
           Otherwise, this method will block.
         """
-        coroutine = self.connect_async(hostname, port, ssl, extensions)
+        coroutine = self.connect_async(
+            hostname, port, ssl, extensions, client_cert)
         if asyncio.Task.current_task(loop=self.loop) is not None:
             return coroutine
         self.run_until_complete(coroutine)
@@ -1454,8 +1475,11 @@ class IRCBot:
 
         :param str account: The account to log in to.
         :param str password: The password for the account.
-        :param str mechanism: The SASL mechanism to use. Currently, "PLAIN" is
-          the only supported mechanism.
+        :param str mechanism: The SASL mechanism to use. Currently, the
+          supported mechanisms are "PLAIN" and "EXTERNAL". To use EXTERNAL
+          authentication, provide a client certificate (``client_cert``) when
+          calling :meth:`connect`, and do not provide ``account`` or
+          ``password`` to this method.
         :param kwargs: Keyword arguments to be used by the specified SASL
           mechanism. Some SASL mechanisms may need arguments other than
           ``account`` and ``password``.

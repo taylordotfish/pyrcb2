@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2015-2017 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -37,6 +37,7 @@ import asyncio
 import functools
 import inspect
 import logging
+import ssl
 import sys
 import time
 import unittest
@@ -541,9 +542,26 @@ class TestConnect(BaseBotTest):
     def test_connect_ssl(self):
         self.bot.connect("irc.example.com", 6697, ssl=True)
         self.assertCalledOnce(
-            asyncio.open_connection, "irc.example.com", 6697,
-            loop=self.loop, ssl=True,
-        )
+            asyncio.open_connection, "irc.example.com", 6697, loop=self.loop,
+            ssl=mock.ANY)
+        context = asyncio.open_connection.call_args[1]["ssl"]
+        self.assertIsInstance(context, ssl.SSLContext)
+
+    async def test_connect_client_cert(self):
+        # Need to subclass SSLContext to modify load_cert_chain.
+        class SSLContext(ssl.SSLContext):
+            pass
+        context = SSLContext()
+        context.load_cert_chain = mock.Mock(
+            spec=context.load_cert_chain, return_value=None)
+        await self.bot.connect(
+            "irc.example.com", 6697, ssl=context,
+            client_cert=("/certfile", "/keyfile", "password"))
+        self.assertCalledOnce(
+            asyncio.open_connection, "irc.example.com", 6697, loop=self.loop,
+            ssl=context)
+        self.assertCalledOnce(
+            context.load_cert_chain, "/certfile", "/keyfile", "password")
 
     async def test_connect_no_extensions(self):
         await self.bot.connect("irc.example.com", 6667, extensions=False)
@@ -554,7 +572,6 @@ class TestConnect(BaseBotTest):
 
     def test_sasl_auth(self):
         self.bot.connect("irc.example.com", 6667, extensions=False)
-        self.clear_sent()
         self.from_server(
             ":server CAP * ACK :sasl",
             ":server AUTHENTICATE :+",
@@ -569,13 +586,23 @@ class TestConnect(BaseBotTest):
 
     async def test_sasl_auth_fail(self):
         await self.bot.connect("irc.example.com", 6667, extensions=False)
-        self.clear_sent()
         self.from_server(
             ":server CAP * ACK :sasl",
             ":server AUTHENTICATE :+",
             ":server 904 * :SASL authentication failed")
         with self.assertRaises(WaitError):
             await self.bot.sasl_auth("account", "password")
+
+    async def test_sasl_auth_external(self):
+        await self.bot.connect(
+            "irc.example.com", 6697, ssl=True, extensions=False)
+        self.from_server(
+            ":server CAP * ACK :sasl",
+            ":server AUTHENTICATE +",
+            ":server 903 * :SASL authentication successful")
+        await self.bot.sasl_auth(mechanism="EXTERNAL")
+        self.assertSent(
+            "CAP REQ :sasl", "AUTHENTICATE :EXTERNAL", "AUTHENTICATE :+")
 
     def test_register(self):
         self.bot.connect("irc.example.com", 6667)
