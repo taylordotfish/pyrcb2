@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (C) 2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2016-2017 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
