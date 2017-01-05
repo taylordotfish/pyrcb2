@@ -1,6 +1,8 @@
 pyrcb2
 ======
 
+Version 0.3.0
+
 **pyrcb2** is an `asyncio`_-based library for writing IRC bots. It is designed
 to be easy to use, customizable, and high-level.
 
@@ -56,8 +58,10 @@ If you're new to pyrcb2, start with `this guide`_ and take a look at the
 __ https://pythonhosted.org/pyrcb2/
 .. _this guide: https://pythonhosted.org/pyrcb2/getting-started.html
 
-This branch contains the development version of pyrcb2.
-See the ``stable`` branch for the latest stable release.
+This branch contains pyrcb2 version **0.3.0**.
+See the `changelog`_ for information about this version.
+
+.. _changelog: https://pythonhosted.org/pyrcb2/release-notes/0.3.html
 
 
 Tests
