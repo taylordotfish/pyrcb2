@@ -1,7 +1,7 @@
 # !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # Copyright (c) 2007-2016 by the Sphinx team (see sphinx-license/AUTHORS).
-# Copyright (c) 2016 taylor.fish <contact@taylor.fish>
+# Copyright (c) 2016-2017 taylor.fish <contact@taylor.fish>
 # License: FreeBSD (2-clause), see sphinx-license/LICENSE for details.
 
 # pyrcb2 documentation build configuration file, created by
@@ -306,7 +306,7 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3.5/', None),
+    'python': ('https://docs.python.org/3/', None),
 }
 
 
