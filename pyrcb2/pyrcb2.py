@@ -1266,6 +1266,9 @@ class IRCBot:
                 client_cert = (client_cert,)
             if client_cert is not None:
                 ssl.load_cert_chain(*client_cert)
+        elif client_cert:
+            raise ValueError(
+                "'ssl' must be true when using a client certificate.")
 
         self.server_address = "{}:{}".format(hostname, port)
         self.reader, self.writer = await asyncio.open_connection(
@@ -1452,7 +1455,7 @@ class IRCBot:
           If this is a string, it is passed as the ``certfile`` argument to
           :meth:`ssl.SSLContext.load_cert_chain`; otherwise, this should be
           a tuple or list that contains the arguments to be passed to
-          :meth:`ssl.SSLContext.load_cert_chain`.
+          :meth:`ssl.SSLContext.load_cert_chain`. ``ssl`` must be true.
         :returns: A coroutine if this method was called from another coroutine.
           Otherwise, this method will block.
         """
