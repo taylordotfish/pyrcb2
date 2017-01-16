@@ -25,6 +25,7 @@
 from .accounts import AccountTracker
 from .decorators import cast_args, document_attr
 from .events import Event
+from .graphemes import graphemes as iter_graphemes
 from .itypes import IStr, IDict, IDefaultDict, ISet, User, Sender
 from .messages import (
     Message, Reply, Error, ANY, ANY_ARGS, SELF, matches_pattern,
@@ -762,8 +763,8 @@ class IRCBot:
         :param bool split: If true, long messages will be split into multiple
           pieces to avoid truncation. See :meth:`split_string`.
         :param bool nobreak: If true (and ``split`` is true), long messages
-          will be split only where whitespace occurs to avoid breaking words,
-          unless this is not possible.
+          will be split only where spaces occur to avoid breaking words, unless
+          this is not possible.
         :returns: A coroutine that blocks until the message is sent. Useful
           when message delaying is enabled.
         :rtype: `OptionalCoroutine`
@@ -781,8 +782,8 @@ class IRCBot:
         :param bool split: If true, long messages will be split into multiple
           pieces to avoid truncation. See :meth:`split_string`.
         :param bool nobreak: If true (and ``split`` is true), long messages
-          will be split only where whitespace occurs to avoid breaking words,
-          unless this is not possible.
+          will be split only where spaces occur to avoid breaking words, unless
+          this is not possible.
         :returns: A coroutine that blocks until the notice is sent. Useful
           when message delaying is enabled.
         :rtype: `OptionalCoroutine`
@@ -1729,7 +1730,7 @@ class IRCBot:
         IRC messages are limited to 512 bytes, so it is sometimes necessary to
         split longer messages. This method splits strings based on how many
         bytes, rather than characters, they take up, keeping multi-byte
-        characters intact. For example::
+        characters and multi-character graphemes intact. For example::
 
             >>> IRCBot.split_string("This is a test§§§§", 8)
             ['This is', 'a', 'test§§', '§§']
@@ -1737,6 +1738,9 @@ class IRCBot:
             ['This is ', 'a test§', '§§§']
             >>> IRCBot.split_string("This is a test§§§§", 8, once=True)
             ['This is', 'a test§§§§']
+            >>> # "c\\u0308" is a single grapheme and shouldn't be split:
+            ... IRCBot.split_string("abc\\u0308 abc", 4)
+            ['ab', 'c\\u0308', 'abc']
 
         You can use :meth:`safe_message_length` and :meth:`safe_notice_length`
         to determine how large each string piece should be.
@@ -1747,63 +1751,88 @@ class IRCBot:
         :param str string: The string to split.
         :param int bytelen: The maximum number of bytes string pieces should
           take up when encoded as UTF-8.
-        :param bool nobreak: If true, strings will be split only where
-          whitespace occurs to avoid breaking words, unless this is not
-          possible. If present, one space character will be removed between
-          string pieces.
+        :param bool nobreak: If true, strings will be split only where spaces
+          occur to avoid breaking words, unless this is not possible. If
+          present, one space character will be removed between string pieces.
         :param bool once: If true, the string will only be split once. The
           second piece is not guaranteed to be less than ``bytelen``.
         :returns: A list of the split string pieces.
         :rtype: `list`
         """
-        result = []
-        rest = string
-        split_func = cls.split_nobreak if nobreak else cls.split_once
-        while not result or (rest and not once):
-            split, rest = split_func(rest, bytelen)
-            result.append(split)
-        if rest:
-            result.append(rest)
-        return result
+        if not string:
+            return string
+        if once:
+            split = next(cls._split_string(string, bytelen, nobreak))
+            rest = string[len(split):]
+            if rest and next(iter_graphemes(rest)) == " ":
+                rest = rest[1:]
+            return list(filter(None, [split, rest]))
+        return list(cls._split_string(string, bytelen, nobreak))
 
-    # Splits a string based on the number of bytes it takes
-    # up when encoded as UTF-8.
     @classmethod
-    def split_once(cls, string, bytelen):
+    def _split_string(cls, string, bytelen, nobreak):
         if bytelen <= 0:
             raise ValueError("Number of bytes must be positive.")
-        bytestr = string.encode("utf8")
-        if len(bytestr) <= bytelen:
-            return (string, "")
-        split, rest = bytestr[:bytelen], bytestr[bytelen:]
-        # If the last byte of "split" is non-ASCII and the first byte of "rest"
-        # is neither ASCII nor the start of a multi-byte character, then a
-        # multi-byte Unicode character has been split and needs to be fixed.
-        if ord(split[-1:]) >= 0x80 and 0x80 <= ord(rest[:1]) <= 0xc0:
-            chars = reversed(list(enumerate(split)))
-            start = next(i for i, c in chars if c >= 0xc0)
-            split, rest = split[:start], split[start:] + rest
-        return (split.decode("utf8"), rest.decode("utf8"))
+        if len(string.encode("utf8")) <= bytelen:
+            yield string
+            return
 
-    # Like split_once(), but splits only where whitespace occurs to avoid
-    # breaking words (unless not possible). If present, once space character
-    # between split strings will be removed (similar to WeeChat's behavior).
+        graphemes = graphemes_with_bytes(string, end_with_none=True)
+        grapheme, grapheme_bytes = next(graphemes)
+        piece, piece_bytelen = [], 0
+        space_index, space_byte_index, nonspace = None, None, None
+
+        while grapheme is not None:
+            if piece_bytelen + len(grapheme_bytes) <= bytelen:
+                piece.append(grapheme)
+                piece_bytelen += len(grapheme_bytes)
+                if grapheme == " ":
+                    space_index = len(piece) - 1
+                    space_byte_index = piece_bytelen - 1
+                elif nonspace is None:
+                    nonspace = len(piece) - 1
+                grapheme, grapheme_bytes = next(graphemes)
+                continue
+
+            if not piece:
+                # Forced to split grapheme.
+                *grapheme_parts, grapheme_bytes = (
+                    cls._split_bytes_by_code_points(grapheme_bytes, bytelen))
+                grapheme = grapheme_bytes.decode("utf8")
+                nonspace = 0  # Should count as a non-space char.
+                yield from (b.decode("utf8") for b in grapheme_parts)
+                continue
+
+            new_piece, new_bytelen = [], 0
+            if not nobreak:
+                pass
+            elif grapheme == " ":
+                grapheme, grapheme_bytes = next(graphemes)
+            elif space_index is not None:
+                new_piece = piece[space_index + 1:]
+                piece = piece[:space_index + (space_index <= nonspace)]
+                new_bytelen = piece_bytelen - space_byte_index - 1
+            yield "".join(piece)
+            piece, piece_bytelen = new_piece, new_bytelen
+            space_index, space_byte_index, nonspace = None, None, None
+        yield "".join(piece)
+
     @classmethod
-    def split_nobreak(cls, string, bytelen):
-        split, rest = cls.split_once(string, bytelen)
-        if not rest:
-            return (split, rest)
-        if not split[-1].isspace() and not rest[0].isspace():
-            chars = reversed(list(enumerate(split)))
-            space = next((i for i, c in chars if c.isspace()), -1)
-            if space >= 0:
-                split, rest = split[:space], split[space:] + rest
-        # If present, remove one space character between strings.
-        if rest[0] == " ":
-            rest = rest[1:]
-        elif split[-1] == " ":
-            split = split[:-1]
-        return (split, rest)
+    def _split_bytes_by_code_points(cls, bytestr, bytelen):
+        if bytelen <= 0:
+            raise ValueError("Number of bytes must be positive.")
+        while len(bytestr) > bytelen:
+            split, rest = bytestr[:bytelen], bytestr[bytelen:]
+            # If the last byte of "split" is non-ASCII and the first byte of
+            # "rest" is neither ASCII nor the start of a multi-byte character,
+            # then a multi-byte Unicode character has been split.
+            if ord(split[-1:]) >= 0x80 and 0x80 <= ord(rest[:1]) <= 0xc0:
+                chars = reversed(list(enumerate(split)))
+                start = next(i for i, c in chars if c >= 0xc0)
+                split, rest = split[:start], split[start:] + rest
+            yield split
+            bytestr = rest
+        yield bytestr
 
     def split_message(self, message, **kwargs):
         bytelen = self.safe_length(*message[1:-1])
@@ -1834,3 +1863,10 @@ DelayedMessage = namedtuple("DelayedMessage", [
 class DelayedMessage(DelayedMessage):
     def __new__(cls, message, orig_target, future=None, split=None):
         return super().__new__(cls, message, orig_target, future, split)
+
+
+def graphemes_with_bytes(string, end_with_none=False):
+    for grapheme in iter_graphemes(string):
+        yield grapheme, grapheme.encode("utf8")
+    if end_with_none:
+        yield None, None
