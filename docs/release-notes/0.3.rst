@@ -28,6 +28,20 @@ Version 0.3
 Changelog
 ---------
 
+.. _changelog-0.3.1:
+
+0.3.1
+~~~~~
+
+* Fixed a bug where :meth:`IRCBot.split_string` would sometimes remove too many
+  spaces.
+* Corrected the behavior of :meth:`IRCBot.split_string` to split based on
+  graphemes, not code points. Graphemes will no longer be split unless
+  absolutely necessary (specifically, if they are longer than the maximum byte
+  length allowed).
+* :meth:`IRCBot.connect` now raises a `ValueError` when a client certificate
+  is specified but ``ssl`` is false.
+
 .. _changelog-0.3.0:
 
 0.3.0
