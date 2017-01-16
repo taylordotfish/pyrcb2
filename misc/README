@@ -1,0 +1,17 @@
+pypy-description.rst
+====================
+
+pypy-description.rst contains pyrcb2's description on PyPi
+(https://pypi.python.org/pypi). It is similar to ../README.rst.
+
+
+GraphemeBreakProperty.txt
+=========================
+
+GraphemeBreakProperty.txt describes the grapheme cluster break property for all
+Unicode characters. It is used for proper string splitting.
+../scripts/generate_grapheme_db.py should be run after updating this file.
+
+Versions of this file can be downloaded from <http://www.unicode.org/Public/>;
+specifically, <http://www.unicode.org/Public/<VERSION>/ucd/auxiliary/
+GraphemeBreakProperty.txt>, where <VERSION> is the version of Unicode.

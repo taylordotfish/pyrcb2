@@ -43,8 +43,12 @@ been released to the public domain. See "licenses/CC0-1.0" or
 <http://creativecommons.org/publicdomain/zero/1.0/> for a copy
 of the CC0 Public Domain Dedication.
 
-The file "scripts/bump-version.py" is licensed under the GNU General
-Public License as published by the Free Software Foundation, either
-version 3 of the License or (at your option) any later version. See
-"licenses/GPL-3.0" or <http://www.gnu.org/licenses/> for a copy of the
-license.
+Files under "scripts/" are licensed under the GNU General Public License
+as published by the Free Software Foundation, either version 3 of the
+License or (at your option) any later version. See "licenses/GPL-3.0"
+or <http://www.gnu.org/licenses/> for a copy of the license.
+
+The files "misc/GraphemeBreakProperty.txt" and "pyrcb2/grapheme_break_db.py"
+are licensed under the Unicode Inc. License Agreement for Data Files and
+Software. See "licenses/UNICODE" or <http://www.unicode.org/copyright.html>
+for a copy of the license.
