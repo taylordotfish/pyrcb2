@@ -25,7 +25,7 @@
 pyrcb2
 ======
 
-Development version
+Version 0.3.1
 
 **pyrcb2** is an `asyncio`-based library for writing IRC bots. It is designed
 to be easy to use, customizable, and high-level.
@@ -51,12 +51,14 @@ commands right after you send them. ::
 If you're new to pyrcb2, read :doc:`getting-started` and take a look at the
 `examples`_.
 
-This documentation is for the development version of pyrcb2.
+This documentation is for pyrcb2 version **0.3.1**.
+See the :doc:`changelog <release-notes/0.3>`
+for information about this version.
 
 Source code for pyrcb2 and this documentation is available at
-`<https://github.com/taylordotfish/pyrcb2/>`_.
+`<https://github.com/taylordotfish/pyrcb2/tree/0.3.1/>`_.
 
-.. _examples: https://github.com/taylordotfish/pyrcb2/tree/master/examples/
+.. _examples: https://github.com/taylordotfish/pyrcb2/tree/0.3.1/examples/
 
 
 .. toctree::
@@ -67,6 +69,6 @@ Source code for pyrcb2 and this documentation is available at
    getting-started
    custom-commands
    release-notes/index
-   Source code <https://github.com/taylordotfish/pyrcb2/tree/master/>
-   Examples <https://github.com/taylordotfish/pyrcb2/tree/master/examples/>
-   License <https://github.com/taylordotfish/pyrcb2/blob/master/LICENSE>
+   Source code <https://github.com/taylordotfish/pyrcb2/tree/0.3.1/>
+   Examples <https://github.com/taylordotfish/pyrcb2/tree/0.3.1/examples/>
+   License <https://github.com/taylordotfish/pyrcb2/blob/0.3.1/LICENSE>
