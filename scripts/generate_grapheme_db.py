@@ -13,6 +13,12 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# This file contains data originally from the Unicode Character Database,
+# which is covered by the following copyright and license notice:
+# © 2016 Unicode®, Inc.
+# Licensed under the Unicode Inc. License Agreement for Data Files and
+# Software, available at <http://www.unicode.org/copyright.html>.
 
 from collections import OrderedDict
 import os
@@ -31,6 +37,7 @@ BREAK_VALUES = [
 
 BREAK_MAP = dict(zip(BREAK_VALUES, range(len(BREAK_VALUES))))
 
+# From http://www.unicode.org/Public/9.0.0/ucd/auxiliary/GraphemeBreakTest.html
 BREAK_TABLE = [
     [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
     [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
