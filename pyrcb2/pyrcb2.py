@@ -37,7 +37,7 @@ from .utils import (
     forward_attrs, StreamHandler)
 from . import numerics
 
-from collections import defaultdict, deque, namedtuple
+from collections import defaultdict, deque, namedtuple, OrderedDict
 from inspect import isawaitable
 import asyncio
 import heapq
@@ -133,7 +133,7 @@ class IRCBot:
         self.is_registered = False
         self.extensions = ISet()
         self.isupport = IDict()
-        self.prefixes = dict(zip("ov", "@+"))
+        self.prefixes = OrderedDict(zip("ov", "@+"))
         self.chanmodes = ("", "", "", "")
 
         self.channels = ISet()
@@ -648,7 +648,7 @@ class IRCBot:
             self.isupport[name] = value
             if name == "PREFIX":
                 modes, prefixes = value[1:].split(")", 1)
-                self.prefixes = dict(zip(modes, prefixes))
+                self.prefixes = OrderedDict(zip(modes, prefixes))
             elif name == "CHANMODES":
                 self.chanmodes = tuple((value + ",,,").split(",")[:4])
 
