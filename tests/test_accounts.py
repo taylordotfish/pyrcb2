@@ -402,6 +402,19 @@ class TestAccountTracker(BaseBotTest):
         await self.from_server(":self PART #channel")
         self.assertCalledOnce(handler, "user5", "acc4")
 
+    async def test_account_tracking_on_nick_change(self):
+        await self.join_channel()
+        await self.from_server(
+            ":server 311 self user3 user host * :realname",
+            ":server 330 self user3 acc3 :is logged in as",
+            ":server 318 self user3 :End of whois",
+        )
+        self.assertTrue(self.bot.is_account_synced("user3"))
+        await self.from_server(":user3 NICK :user4")
+        self.assertTrue(self.bot.is_account_synced("user4"))
+        await self.from_server(":user4 NICK :user3")
+        self.assertTrue(self.bot.is_account_synced("user3"))
+
 
 def main():
     asyncio.set_event_loop(None)

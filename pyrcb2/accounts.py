@@ -756,6 +756,7 @@ class AccountTracker:
     @Event.nick
     async def on_nick(self, old_nickname, new_nickname):
         coroutines = self.get_coroutines(old_nickname, known=False)
+        self.set_tracked(new_nickname)
         if self.is_account_synced(old_nickname):
             account = self.accounts[old_nickname]
             coroutines |= self.get_coroutines(
@@ -767,7 +768,6 @@ class AccountTracker:
             self.is_tracking_id_statuses or
             self.is_id_status_synced(old_nickname))
         self.set_untracked(old_nickname)
-        self.set_tracked(new_nickname)
         if check_id_status:
             coroutines.add(self.get_id_status(new_nickname, use_cache=False))
         coroutines and await self.bot.gather(*coroutines)
