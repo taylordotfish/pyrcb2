@@ -28,6 +28,16 @@ Version 0.3
 Changelog
 ---------
 
+.. _changelog-0.3.2:
+
+0.3.2
+~~~~~
+
+* Fixed an issue with account tracking when users change nicknames. A user's
+  account should stay synced when they change nicknames, but previously, their
+  account would not be synced if they switched to their previous nickname
+  (e.g., user1 → user2 → user1).
+
 .. _changelog-0.3.1:
 
 0.3.1
