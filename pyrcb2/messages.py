@@ -1,4 +1,4 @@
-# Copyright (C) 2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2016-2017 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -312,7 +312,7 @@ class WaitResult:
         `WaitError` is returned.
 
         Arguments passed to this method are forwarded to `WaitError`'s
-        constructor. The first argument to `WaitResult` is always this object.
+        constructor. The first argument to `WaitError` is always this object.
 
         :rtype: `ConnectionError` or `WaitError`
         """
