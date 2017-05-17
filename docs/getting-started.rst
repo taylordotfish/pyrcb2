@@ -49,8 +49,8 @@ server to be logged to standard output (often useful when debugging).
 ``self.bot.load_events(self)`` loads events that are part of the current
 ``MyBot`` object. We'll add some events later.
 
-There are a number of ways to start a bot, but this is preferred way, because
-it allows all bot initialization code to be run asynchronously::
+There are a number of ways to start a bot, but this is the preferred way,
+because it allows all bot initialization code to be run asynchronously::
 
     class MyBot:
         def __init__(self):
