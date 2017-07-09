@@ -1639,9 +1639,14 @@ class IRCBot:
         """
         return gather(*coroutines, loop=self.loop)
 
-    # Parses an IRC message.
     @classmethod
     def parse(cls, message):
+        """Parses an IRC message.
+
+        :param str message: The IRC message to parse.
+        :returns: The parsed IRC message.
+        :rtype: `Message`
+        """
         # Regex to parse IRC messages.
         match = re.match(r"""
             (?::  # Start of prefix

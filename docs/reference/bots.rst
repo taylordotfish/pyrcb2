@@ -95,6 +95,7 @@ Other methods
 .. automethod:: IRCBot.gather
 .. automethod:: IRCBot.safe_message_length
 .. automethod:: IRCBot.split_string
+.. automethod:: IRCBot.parse
 
 Attributes
 ~~~~~~~~~~
