@@ -1,4 +1,4 @@
-.. Copyright (C) 2016-2017 taylor.fish <contact@taylor.fish>
+.. Copyright (C) 2017 taylor.fish <contact@taylor.fish>
 
 .. This file is part of pyrcb2-docs, documentation for pyrcb2.
 
@@ -22,12 +22,18 @@
 
 .. currentmodule:: pyrcb2
 
-Release notes
-=============
+Version 0.4
+===========
 
-.. toctree::
+Changelog
+---------
 
-   0.4
-   0.3
-   0.2
-   0.1
+.. _changelog-0.4.0:
+
+0.4.0
+~~~~~
+
+* Added :meth:`IRCBot.parse` to the documentation.
+* Fixed the documentation for :meth:`IRCBot.kick`.
+* Fixed a minor error in the documentation.
+* Cleaned up some parts of the code.
