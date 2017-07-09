@@ -740,6 +740,9 @@ class IRCBot:
         :param str channel: The channel to kick the user from.
         :param str target: The user to kick.
         :param str message: An optional kick message.
+        :returns: A coroutine that blocks until the user has been kicked from
+          the channel or an error has occurred.
+        :rtype: `OptionalCoroutine`; returns a `WaitResult` when awaited.
         """
         future = self.send_command("KICK", channel, target, *optargs(message))
         return self.wait_for(
