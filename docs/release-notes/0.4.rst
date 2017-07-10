@@ -28,6 +28,13 @@ Version 0.4
 Changelog
 ---------
 
+.. _changelog-0.4.2:
+
+0.4.2
+~~~~~
+
+* Fixed links that were pointing to the old documentation.
+
 .. _changelog-0.4.1:
 
 0.4.1
