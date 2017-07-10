@@ -44,8 +44,13 @@ def update_readme(version, short_version, dev):
     ] if dev else [
         "This branch contains pyrcb2 version **%s**." % version,
         "See the `changelog`_ for information about this version.", "",
-        ".. _changelog: https://pythonhosted.org/pyrcb2"
+
+        ".. _changelog: https://taylor.fish/pyrcb2"
         "/release-notes/{0}.html".format(short_version),
+
+        # ".. _changelog: https://pythonhosted.org/pyrcb2"
+        # "/release-notes/{0}.html".format(short_version),
+
         # ".. _changelog: https://pyrcb2.readthedocs.io"
         # "/en/{0}/release-notes/{0}.html".format(short_version),
     ]

@@ -49,12 +49,12 @@ You can use the ``--user`` option to install to your home directory instead.
 Documentation
 -------------
 
-Documentation for pyrcb2 is available at `https://pythonhosted.org/pyrcb2/`__.
+Documentation for pyrcb2 is available at `https://taylor.fish/pyrcb2/`__.
 If you're new to pyrcb2, start with `this guide`_ and take a look at the
 `examples <examples/>`_.
 
-__ https://pythonhosted.org/pyrcb2/
-.. _this guide: https://pythonhosted.org/pyrcb2/getting-started.html
+__ https://taylor.fish/pyrcb2/
+.. _this guide: https://taylor.fish/pyrcb2/getting-started.html
 
 This branch contains the development version of pyrcb2.
 See the ``stable`` branch for the latest stable release.
