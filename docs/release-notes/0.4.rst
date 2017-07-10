@@ -28,6 +28,13 @@ Version 0.4
 Changelog
 ---------
 
+.. _changelog-0.4.1:
+
+0.4.1
+~~~~~
+
+* Moved documentation to `<https://taylor.fish/pyrcb2/>`_.
+
 .. _changelog-0.4.0:
 
 0.4.0
