@@ -526,6 +526,7 @@ class TestConnect(BaseBotTest):
             loop=self.loop, ssl=False)
         self.assertSent(
             "CAP REQ :multi-prefix", "CAP REQ :account-notify",
+            "CAP REQ :extended-join",
         )
 
     async def test_connect_async(self):
@@ -537,6 +538,7 @@ class TestConnect(BaseBotTest):
             loop=self.loop, ssl=False)
         self.assertSent(
             "CAP REQ :multi-prefix", "CAP REQ :account-notify",
+            "CAP REQ :extended-join",
         )
 
     def test_connect_ssl(self):
