@@ -1,4 +1,4 @@
-.. Copyright (C) 2016-2017 taylor.fish <contact@taylor.fish>
+.. Copyright (C) 2017 taylor.fish <contact@taylor.fish>
 
 .. This file is part of pyrcb2-docs, documentation for pyrcb2.
 
@@ -22,13 +22,16 @@
 
 .. currentmodule:: pyrcb2
 
-Release notes
-=============
+Version 0.5
+===========
 
-.. toctree::
+Changelog
+---------
 
-   0.5
-   0.4
-   0.3
-   0.2
-   0.1
+.. _changelog-0.5.0:
+
+0.5.0
+~~~~~
+
+* The IRCv3 extension ``extended-join`` is now requested by default.
+* Updated the Unicode grapheme break database.
