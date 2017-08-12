@@ -71,7 +71,7 @@ OUTPUT_HEADER = """\
 def main():
     code_point_break_map = OrderedDict()
     copyright_line = "# © 2016 Unicode®, Inc."
-    with open(INPUT) as f:
+    with open(INPUT, encoding="utf-8-sig") as f:
         for line in f:
             if line.startswith("# ©"):
                 copyright_line = line.rstrip()
