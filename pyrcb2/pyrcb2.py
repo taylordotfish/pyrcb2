@@ -695,13 +695,13 @@ class IRCBot:
             future,
             Message(SELF, "JOIN", channel),
             Reply("RPL_ENDOFNAMES", channel, ANY),
-            errors=Error([
+            errors=Error({
                 "ERR_BANNEDFROMCHAN", "ERR_INVITEONLYCHAN",
                 "ERR_BADCHANNELKEY", "ERR_CHANNELISFULL",
                 "ERR_BADCHANMASK", "ERR_NOSUCHCHANNEL",
                 "ERR_TOOMANYCHANNELS", "ERR_UNAVAILRESOURCE",
                 "ERR_TOOMANYTARGETS",
-            ], channel, ANY),
+            }, channel, ANY),
         )
 
     @cast_args
@@ -1181,8 +1181,7 @@ class IRCBot:
         :param capture: The messages to capture. Messages that match these
           patterns will be captured and returned in the `WaitResult`. This
           parameter can be a single message or a list, or set to `True`, in
-          which case message that match ``expected`` will be captured.
-          be captured.
+          which case messages that match ``expected`` will be captured.
         :param timeout: How many seconds to wait before returning with a
           timeout error. If set to None, `default_timeout` will be used. If set
           to 0 or a negative value, no timeout will be used.
