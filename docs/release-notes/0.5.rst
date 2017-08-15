@@ -28,6 +28,15 @@ Version 0.5
 Changelog
 ---------
 
+.. _changelog-0.5.1:
+
+0.5.1
+~~~~~
+
+* Fixed a bug where the coroutine returned by :meth:`IRCBot.join` would time
+  out when ``extended-join`` was enabled.
+* Fixed the formatting of `WaitError` messages.
+
 .. _changelog-0.5.0:
 
 0.5.0
