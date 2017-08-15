@@ -256,6 +256,8 @@ class WaitResult:
       error. Values include "message" (when an error message from the server
       is received), "timeout", and "disconnected" (when connection to the
       server is lost).
+    :param list messages: The IRC messages associated with this result (if
+      any). Messages should be of type `Message`.
     """
     def __init__(self, success, value=None, error=None, error_cause=None,
                  messages=None):
@@ -383,17 +385,19 @@ class WaitError(Exception):
     """
     def __init__(self, wait_result, prefix=None, message=None):
         self.result = wait_result
+        exc_message = prefix + ": " if prefix else ""
+
         if message is not None:
-            super().__init__(message)
+            exc_message += str(message)
+            super().__init__(exc_message)
             return
 
         if wait_result.error_cause != "message":
-            super().__init__("Error cause: %s" % wait_result.error_cause)
+            exc_message += "Error cause: {}".format(wait_result.error_cause)
+            super().__init__(exc_message)
             return
 
         sender, command, *args = wait_result.error
-        exc_message = prefix + ": " if prefix else ""
-
         if command in numerics.replies:
             exc_message += numerics.replies[command] + ": "
         if sender:
