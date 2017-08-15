@@ -187,6 +187,14 @@ class TestCommands(BaseBotTest):
         self.assertIsInstance(users, IDict)
         self.assertCountEqual(users, ISet({"self", "user2"}))
 
+    async def test_join_extended(self):
+        future = self.bot.ensure_future(self.bot.join("#channel3"))
+        await self.from_server(":self JOIN #channel3 acc1 :realname")
+        await self.from_server(":server 353 self @ #channel3 :user2 self")
+        await self.from_server(":server 366 self #channel3 :End of names")
+        self.assertTrue(future.done())
+        self.assertSuccess(future.result())
+
     async def test_part(self):
         messages = [
             ("#channel", None, "PART :#channel"),

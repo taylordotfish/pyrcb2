@@ -693,7 +693,7 @@ class IRCBot:
         future = self.send_command("JOIN", channel)
         return self.wait_for_all(
             future,
-            Message(SELF, "JOIN", channel),
+            Message(SELF, "JOIN", channel, ANY_ARGS),
             Reply("RPL_ENDOFNAMES", channel, ANY),
             errors=Error({
                 "ERR_BANNEDFROMCHAN", "ERR_INVITEONLYCHAN",
