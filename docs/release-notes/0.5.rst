@@ -1,4 +1,4 @@
-.. Copyright (C) 2017 taylor.fish <contact@taylor.fish>
+.. Copyright (C) 2017-2018 taylor.fish <contact@taylor.fish>
 
 .. This file is part of pyrcb2-docs, documentation for pyrcb2.
 
@@ -27,6 +27,14 @@ Version 0.5
 
 Changelog
 ---------
+
+.. _changelog-0.5.2:
+
+0.5.2
+~~~~~
+
+* Fixed an issue where timed out calls to :meth:`IRCBot.wait_for` would cause
+  exceptions to be thrown.
 
 .. _changelog-0.5.1:
 
