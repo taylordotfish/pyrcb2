@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2017 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2015-2018 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -1121,7 +1121,8 @@ class IRCBot:
             logger.debug("Waiting for read_message()")
             try:
                 message = await asyncio.wait_for(
-                    self.read_message(), timeout, loop=self.loop,
+                    asyncio.shield(self.read_message(), loop=self.loop),
+                    timeout, loop=self.loop,
                 )
             except asyncio.TimeoutError:
                 return WaitResult(False, None, None, "timeout", captured)
