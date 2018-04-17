@@ -28,6 +28,13 @@ Version 0.5
 Changelog
 ---------
 
+.. _changelog-0.5.3:
+
+0.5.3
+~~~~~
+
+* Fixed issues with reusing `IRCBot` objects.
+
 .. _changelog-0.5.2:
 
 0.5.2
