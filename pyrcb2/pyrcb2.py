@@ -74,15 +74,11 @@ class IRCBot:
     def __init__(self, log_communication=False, log_debug=False,
                  log_kwargs=None, loop=None):
         self.loop = loop or asyncio.get_event_loop()
-        self._first_use = True
-        self.reset()
-
         self.logger = None
         self.set_up_logging(log_communication, log_debug, log_kwargs)
         self.account_tracker = AccountTracker(self)
         self.sasl = SASL(self)
-        self.load_events(self)
-        self.load_events(self.account_tracker)
+        self._first_use = True
 
         self.default_timeout = 120
         self.use_hostname_when_splitting = True
@@ -98,6 +94,10 @@ class IRCBot:
         self.privmsg_delay_multiplier = 0.1
         self.privmsg_max_delay = 1.5
         self.privmsg_consecutive_timeout = 5
+
+        # Set remaining attributes.
+        self.reset()
+        self.reset_irc_data()
 
     def reset(self):
         self.server_address = None
@@ -122,25 +122,7 @@ class IRCBot:
         self.scheduled_futures = {}
         self.new_scheduled = self.loop.create_future()
 
-        self.nickname = None
-        self.username = None
-        self.hostname = None
-        self.old_nickname = None
-        self.pending_username = None
-        self.pending_nicknames = IDict()
-
         self.is_alive = False
-        self.is_registered = False
-        self.extensions = ISet()
-        self.isupport = IDict()
-        self.prefixes = OrderedDict(zip("ov", "@+"))
-        self.chanmodes = ("", "", "", "")
-
-        self.channels = ISet()
-        self.newly_left_channels = ISet()
-        self.users = UsersDict()
-        self.raw_names = IDefaultDict(list)
-
         self.current_message = None
         self.captured_messages = []
         self.capture_messages = False
@@ -153,6 +135,29 @@ class IRCBot:
         self.new_queue_targets_event = asyncio.Event(loop=self.loop)
         self.delay_heap = []
         self.old_delay_targets = IDict()
+
+        self.load_events(self)
+        self.load_events(self.account_tracker)
+
+    def reset_irc_data(self):
+        self.nickname = None
+        self.username = None
+        self.hostname = None
+        self.old_nickname = None
+        self.pending_username = None
+        self.pending_nicknames = IDict()
+
+        self.is_registered = False
+        self.extensions = ISet()
+        self.isupport = IDict()
+        self.prefixes = OrderedDict(zip("ov", "@+"))
+        self.chanmodes = ("", "", "", "")
+
+        self.channels = ISet()
+        self.newly_left_channels = ISet()
+        self.users = UsersDict()
+        self.raw_names = IDefaultDict(list)
+
         if not self._first_use:
             self.account_tracker.reset()
 
@@ -1260,7 +1265,7 @@ class IRCBot:
             self, hostname, port, ssl=False, extensions=True,
             client_cert=None):
         if not self._first_use:
-            self.reset()
+            self.reset_irc_data()
         self._first_use = False
 
         if ssl:
@@ -1323,6 +1328,7 @@ class IRCBot:
         async def cleanup():
             self.is_alive = False
             await cancel_futures(self.listen_futures)
+            self.reset()
 
         while True:
             done, pending = await asyncio.wait(
