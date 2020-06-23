@@ -86,7 +86,6 @@ class BaseBotTest(BaseTest):
         self.clock = MockClock(loop=self.loop)
         self.patch("time.monotonic", new=self.clock)
         self.patch("time.time", new=self.clock)
-        self.patch("time.clock", new=self.clock)
         mock_sleep = MockAsyncSleep(self.clock)
         self.patch("asyncio.sleep", new=mock_sleep)
         self.reader = MockReader(loop=self.loop)
