@@ -1379,6 +1379,10 @@ class IRCBot:
     def call_coroutine(self, coroutine):
         self.run_blocking(coroutine)
 
+    # Provided for limited backward compatibility.
+    def schedule_coroutine(self, coroutine):
+        asyncio.ensure_future(coroutine)
+
     async def wait_until_disconnected(self):
         """Waits until the bot is disconnected from the IRC server. It is not
         necessary to call this method, but it could be useful in some cases.
@@ -1388,6 +1392,10 @@ class IRCBot:
     # Provided for limited backward compatibility.
     def listen(self):
         return self.wait_until_disconnected()
+
+    # Provided for limited backward compatibility.
+    def listen_async(self, *args, **kwargs):
+        return self.listen(*args, **kwargs)
 
     async def connect(
             self, hostname, port, ssl=False, extensions=True,
@@ -1434,6 +1442,10 @@ class IRCBot:
             self.cap_req("account-notify")
             self.cap_req("extended-join")
 
+    # Provided for limited backward compatibility.
+    def connect_async(self, *args, **kwargs):
+        return self.connect(*args, **kwargs)
+
     async def sasl_auth(
             self, account=None, password=None, mechanism="PLAIN", **kwargs):
         """Authenticate (log in to an account) using SASL. The IRCv3 extension
@@ -1455,6 +1467,10 @@ class IRCBot:
         :raises WaitError: if authentication fails.
         """
         await self.sasl.authenticate(account, password, mechanism, **kwargs)
+
+    # Provided for limited backward compatibility.
+    def sasl_auth_async(self, *args, **kwargs):
+        return self.sasl_auth(*args, **kwargs)
 
     async def register(
             self, nickname, realname=None, username=None,
@@ -1505,6 +1521,10 @@ class IRCBot:
 
         if not result.success:
             raise result.to_exception("Could not register.")
+
+    # Provided for limited backward compatibility.
+    def register_async(self, *args, **kwargs):
+        return self.register(*args, **kwargs)
 
     # Provided for limited backward compatibility.
     def ensure_future(self, coroutine):

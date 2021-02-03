@@ -28,6 +28,15 @@ Version 0.6
 Changelog
 ---------
 
+.. _changelog-0.6.1:
+
+0.6.1
+~~~~~
+
+* Added some additional code for limited backward compatibility with older
+  versions.
+* Fixed some minor errors in the documentation.
+
 .. _changelog-0.6.0:
 
 0.6.0
