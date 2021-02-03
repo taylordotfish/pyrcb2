@@ -60,6 +60,12 @@ This branch contains the development version of pyrcb2.
 See the ``stable`` branch for the latest stable release.
 
 
+Dependencies
+------------
+
+pyrcb2 requires Python 3.7 or later.
+
+
 Tests
 -----
 
