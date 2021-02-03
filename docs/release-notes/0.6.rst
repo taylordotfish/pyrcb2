@@ -40,8 +40,8 @@ Changelog
 * pyrcb2 now requires Python 3.7 or later.
 
 * The blocking versions of :meth:`IRCBot.connect`, :meth:`IRCBot.register`,
-  :meth:`IRCBot.sasl_auth` These methods are now coroutines and must be called
-  from async code.
+  :meth:`IRCBot.sasl_auth` have been removed. These methods are now coroutines
+  and must be called from async code.
 
 * :meth:`IRCBot.run` must now be called and awaited before other methods like
   :meth:`~IRCBot.connect` and :meth:`~IRCBot.register` are used. Instead, those
