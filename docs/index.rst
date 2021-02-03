@@ -25,7 +25,7 @@
 pyrcb2
 ======
 
-Development version
+Version 0.6.1-dev
 
 **pyrcb2** is an `asyncio`-based library for writing IRC bots. It is designed
 to be easy to use, customizable, and high-level.

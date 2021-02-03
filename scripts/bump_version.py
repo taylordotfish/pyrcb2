@@ -99,8 +99,8 @@ def update_docs_index(version, short_version, dev):
 
     lines = read_lines("docs/index.rst")
     for i, line in enumerate(lines):
-        if line.startswith("Version ") or line == "Development version":
-            lines[i] = "Development version" if dev else "Version %s" % version
+        if line.startswith("Version "):
+            lines[i] = "Version %s" % version
         if line.startswith("Source code for pyrcb2 and this "):
             lines[i+1] = source_link
 
