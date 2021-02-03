@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2018 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2015-2018, 2021 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -32,9 +32,8 @@ from .messages import (
     matches_any_pattern, WaitResult, WhoisReply)
 from .sasl import SASL
 from .utils import (
-    ensure_list, ensure_coroutine_obj, cancel_future, cancel_futures,
-    cancel_tasks, gather, optargs, get_argument_info, OptionalCoroutine,
-    forward_attrs, StreamHandler)
+    ensure_list, create_future, cancel_futures, gather, optargs,
+    get_argument_info, OptionalCoroutine, forward_attrs, StreamHandler)
 from . import numerics
 
 from collections import defaultdict, deque, namedtuple, OrderedDict
@@ -54,12 +53,11 @@ DEFAULT_LOG_FORMAT = "[%(levelname)s][%(name)s] %(message)s"
 
 class UsersDict(IDict):
     def __missing__(self, key):
-        return None
+        return IDict()
 
 
 class IRCBot:
-    """An IRC bot---handles sending and receiving IRC messages. Instances
-    of this class are reusable.
+    """An IRC bot---handles sending and receiving IRC messages.
 
     :param bool log_communication: If true, communication with the IRC
       server will be logged (to stdout by default).
@@ -68,22 +66,20 @@ class IRCBot:
     :param dict log_kwargs: A list of keyword arguments to be passed to
       :func:`logging.basicConfig`. Applies only when ``log_communication``
       or ``log_debug`` is true and logging has not been set up yet.
-    :param ~asyncio.AbstractEventLoop loop: The event loop to use. If not
-      given, the default event loop will be used.
     """
     def __init__(self, log_communication=False, log_debug=False,
-                 log_kwargs=None, loop=None):
-        self.loop = loop or asyncio.get_event_loop()
+                 log_kwargs=None):
         self.logger = None
         self.set_up_logging(log_communication, log_debug, log_kwargs)
+
+        self._first_use = True
+        self._running = False
         self.account_tracker = AccountTracker(self)
         self.sasl = SASL(self)
-        self._first_use = True
 
         self.default_timeout = 120
         self.use_hostname_when_splitting = True
-        self.quit_on_exception = True
-        self.quit_on_exit = True
+        self.ensure_quit = True
 
         self.delay_messages = True
         self.delay_multiplier = 0.01
@@ -95,51 +91,16 @@ class IRCBot:
         self.privmsg_max_delay = 1.5
         self.privmsg_consecutive_timeout = 5
 
-        # Set remaining attributes.
-        self.reset()
-        self.reset_irc_data()
-
-    def reset(self):
-        self.server_address = None
-        self.reader = None
-        self.writer = None
-
-        self.read_message_future = self.loop.create_future()
         self.event_handlers = []
         self.event_objects = []
         self.existing_event_ids = set()
-        self.read_message_coro_created = asyncio.Event(loop=self.loop)
-        self.new_events_called = False
-
-        if hasattr(self, "connected"):
-            self.connected.set()
-        self.connected = asyncio.Event(loop=self.loop)
-
-        self.listen_future = None
-        self.listen_futures = set()
-        self.new_listen_future = self.loop.create_future()
-        self.scheduled_coroutines = set()
-        self.scheduled_futures = {}
-        self.new_scheduled = self.loop.create_future()
-
-        self.is_alive = False
-        self.current_message = None
-        self.captured_messages = []
-        self.capture_messages = False
-        self.latest_whois_reply = None
-
-        # Maps target -> (last_time, consecutive).
-        self.last_sent = IDict()
-        self.message_queues = IDict()
-        self.new_queue_targets = []
-        self.new_queue_targets_event = asyncio.Event(loop=self.loop)
-        self.delay_heap = []
-        self.old_delay_targets = IDict()
-
         self.load_events(self)
         self.load_events(self.account_tracker)
 
-    def reset_irc_data(self):
+        # Set remaining attributes.
+        self.reset()
+
+    def reset(self):
         self.nickname = None
         self.username = None
         self.hostname = None
@@ -147,6 +108,7 @@ class IRCBot:
         self.pending_username = None
         self.pending_nicknames = IDict()
 
+        self.is_alive = False
         self.is_registered = False
         self.extensions = ISet()
         self.isupport = IDict()
@@ -158,16 +120,35 @@ class IRCBot:
         self.users = UsersDict()
         self.raw_names = IDefaultDict(list)
 
+        self.server_address = None
+        self.reader = None
+        self.writer = None
         if not self._first_use:
             self.account_tracker.reset()
 
-    @document_attr
-    def loop(self):
-        """The event loop used by this bot. If ``loop`` was not given when
-        this bot was created, this will be the default event loop.
+    def init_async(self):
+        self.read_message_future = create_future()
+        self.read_message_coro_created = asyncio.Event()
+        self.connected = asyncio.Event()
 
-        :type: `~asyncio.AbstractEventLoop`
-        """
+        self._listen_done = asyncio.Event()
+        self.listen_future = None
+        self.listen_futures = set()
+        self.new_listen_future = create_future()
+
+        self.new_events_called = False
+        self.current_message = None
+        self.captured_messages = []
+        self.capture_messages = False
+        self.latest_whois_reply = None
+
+        # Maps target -> (last_time, consecutive).
+        self.last_sent = IDict()
+        self.message_queues = IDict()
+        self.new_queue_targets = []
+        self.new_queue_targets_event = asyncio.Event()
+        self.delay_heap = []
+        self.old_delay_targets = IDict()
 
     @document_attr
     def default_timeout(self):
@@ -188,21 +169,33 @@ class IRCBot:
         """
 
     @document_attr
-    def quit_on_exception(self):
-        """Whether or not this bot should send a ``QUIT`` message when an
-        unhandled exception occurs.
+    def ensure_quit(self):
+        """Whether or not to try to ensure a ``QUIT`` message is sent before
+        disconnecting from the server (e.g., due to an unhandled exception that
+        occurs within code called by :meth:`run`).
 
         :type: `bool`
         """
 
-    @document_attr
+    # Provided for limited backward compatibility.
+    @property
     def quit_on_exit(self):
-        """Whether or not this bot should send a ``QUIT`` message when the
-        process is terminated (with a ``SIGTERM``, for example) or when
-        :meth:`sys.exit` is called.
+        return self.ensure_quit
 
-        :type: `bool`
-        """
+    # Provided for limited backward compatibility.
+    @property
+    def quit_on_exception(self):
+        return self.ensure_quit
+
+    # Provided for limited backward compatibility.
+    @quit_on_exit.setter
+    def quit_on_exit(self, value):
+        self.ensure_quit = value
+
+    # Provided for limited backward compatibility.
+    @quit_on_exception.setter
+    def quit_on_exception(self, value):
+        self.ensure_quit = value
 
     @document_attr
     def delay_messages(self):
@@ -351,8 +344,8 @@ class IRCBot:
         keys in ``bot.users["#channel"]``, which are normal `IStr` nicknames.
 
             >>> bot.users["#channel"]
-            IDefaultDict([(IStr('nickname'), User('nickname'))])
-            >>> user = bot.nicklist["#channel"]["nickname"]
+            IDict([(IStr('nickname'), User('nickname'))])
+            >>> user = bot.users["#channel"]["nickname"]
             >>> user
             User('nickname')
             >>> user.has_prefix("+")
@@ -471,9 +464,8 @@ class IRCBot:
 
         if handlers:
             self.new_events_called = True
-            await self.gather(*(
-                self.call_single(func, args, kwargs)
-                for func in handlers
+            await gather(*(
+                self.call_single(func, args, kwargs) for func in handlers
             ))
 
     # Calls a single event handler.
@@ -543,7 +535,7 @@ class IRCBot:
 
         while True:
             self.new_events_called = False
-            future = self.ensure_future(new_events_called())
+            future = asyncio.ensure_future(new_events_called())
             called = await future
             if not called:
                 return
@@ -560,7 +552,7 @@ class IRCBot:
         if self.capture_messages:
             self.captured_messages.append(message)
 
-        await self.gather(
+        await gather(
             self.call(Event, ("command", command), sender, *args),
             self.call(
                 Event, ("reply", command), sender,
@@ -663,7 +655,7 @@ class IRCBot:
 
     @Event.reply("RPL_ENDOFNAMES")
     def on_endofnames(self, sender, target, channel: IStr):
-        users = IDefaultDict()
+        users = IDict()
         nick_chars = r"a-zA-Z0-9-" + re.escape(r"[]\`_^{|}")
         nick_pattern = r"([^{}]*)(.*)".format(nick_chars)
         for name in self.raw_names[channel]:
@@ -826,6 +818,7 @@ class IRCBot:
 
             def matches_old_nick(nick):
                 return nick == self.old_nickname
+
             result = await self.wait_for(
                 Message(matches_old_nick, "NICK", nickname), errors=Error({
                     "ERR_ERRONEUSNICKNAME", "ERR_NICKNAMEINUSE",
@@ -839,7 +832,7 @@ class IRCBot:
                     del self.pending_nicknames[nickname]
             return result
 
-        pending_nick_future = self.ensure_future(pending_nick_coro())
+        pending_nick_future = asyncio.ensure_future(pending_nick_coro())
         self.add_listen_future(pending_nick_future)
 
         async def coroutine():
@@ -957,7 +950,7 @@ class IRCBot:
         return delay
 
     def add_delayed_message(self, target, message, future=None, split=None):
-        future = self.loop.create_future() if future is None else future
+        future = create_future() if future is None else future
         if target is not None and not self.delay_privmsgs:
             target = None
         if target is None and not self.delay_messages:
@@ -1051,9 +1044,12 @@ class IRCBot:
             delay = msg_time - time.monotonic()
 
             if delay > 0:
+                coros = [event.wait(), asyncio.sleep(delay)]
+                futures = set(map(asyncio.ensure_future, coros))
                 done, pending = await asyncio.wait(
-                    {event.wait(), asyncio.sleep(delay, loop=self.loop)},
-                    loop=self.loop, return_when=asyncio.FIRST_COMPLETED)
+                    futures,
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
                 await cancel_futures(pending)
                 if event.is_set():
                     continue
@@ -1105,7 +1101,7 @@ class IRCBot:
         coroutines = pop_coroutines(expected)
         if coroutines:
             logger.debug("Waiting for coroutines: %r", coroutines)
-            await self.gather(*coroutines)
+            await gather(*coroutines)
 
         timeout = self.default_timeout if timeout is None else timeout
         timeout = None if timeout <= 0 else timeout
@@ -1126,8 +1122,7 @@ class IRCBot:
             logger.debug("Waiting for read_message()")
             try:
                 message = await asyncio.wait_for(
-                    asyncio.shield(self.read_message(), loop=self.loop),
-                    timeout, loop=self.loop,
+                    asyncio.shield(self.read_message()), timeout,
                 )
             except asyncio.TimeoutError:
                 return WaitResult(False, None, None, "timeout", captured)
@@ -1231,7 +1226,7 @@ class IRCBot:
 
     def create_read_message(self):
         if self.read_message_future.done():
-            self.read_message_future = self.loop.create_future()
+            self.read_message_future = create_future()
 
         async def coroutine():
             line = await self.readline()
@@ -1259,14 +1254,163 @@ class IRCBot:
         """Disconnects from the server immediately without sending a ``QUIT``
         message.
         """
-        self.writer.close()
+        self.connected.set()
+        if self.writer is not None:
+            self.writer.close()
 
-    async def connect_async(
+    async def _listen(self):
+        await self.connected.wait()
+        if self.writer is None:
+            return
+
+        read_message = asyncio.ensure_future(self.create_read_message())
+        delay_loop = asyncio.ensure_future(self.delay_loop())
+        self.listen_futures |= {
+            read_message, delay_loop, self.new_listen_future,
+        }
+
+        async def cleanup():
+            self.is_alive = False
+            await cancel_futures(self.listen_futures)
+
+        async def process_once():
+            nonlocal read_message
+            done, pending = await asyncio.wait(
+                self.listen_futures, return_when=asyncio.FIRST_COMPLETED,
+            )
+
+            self.listen_futures -= set(done)
+            for future in done:
+                future.result()
+            if self.new_listen_future.done():
+                self.new_listen_future = create_future()
+            if not read_message.done():
+                return True
+
+            message = read_message.result()
+            if message is not None:
+                call = self.call(Event, "any", *message)
+                self.listen_futures.add(asyncio.ensure_future(call))
+                # Wait until every event has reached its first await
+                # (not including self.call()).
+                await self.wait_for_events_called()
+
+            # This will cause calls to self.read_message() to finish.
+            self.read_message_future.set_result(message)
+            if message is not None:
+                read_message_coro = self.create_read_message()
+
+            # Calls to self.wait_for() may have just finished. Give functions
+            # a chance to call events in response to this before moving on to
+            # the next message.
+            await self.wait_for_events_called()
+            if message is None:
+                return False
+
+            read_message = asyncio.ensure_future(read_message_coro)
+            self.listen_futures.add(read_message)
+            return True
+
+        try:
+            while await process_once():
+                pass
+        finally:
+            await cleanup()
+
+    def add_listen_future(self, future):
+        future = asyncio.ensure_future(future)
+        self.listen_futures.add(future)
+        if not self.new_listen_future.done():
+            self.new_listen_future.set_result(None)
+
+    async def run(self, coroutine):
+        """Starts the IRC bot and runs the specified coroutine. The coroutine
+        should set up the bot (by calling :meth:`connect`, :meth:`register`,
+        :meth:`join`, etc.).
+
+        This method (or :meth:`run_blocking`, which calls this method) must be
+        called before calling other methods, like :meth:`connect` or
+        :meth:`register`.
+
+        This method keeps running until the bot is disconnected from the
+        server. The coroutine is cancelled if it is still running when the bot
+        is disconnected.
+
+        :param awaitable coroutine: The coroutine or awaitable object to run.
+        """
+        if self._running:
+            raise RuntimeError("IRCBot.run() has already been called")
+        self._running = True
+
+        if not self._first_use:
+            self.reset()
+        self._first_use = False
+        self.init_async()
+        future = asyncio.ensure_future(coroutine)
+
+        async def listen():
+            try:
+                await self._listen()
+            finally:
+                if not future.done():
+                    future.cancel()
+                self._listen_done.set()
+
+        if self.listen_future is None or self.listen_future.done():
+            self.listen_future = asyncio.ensure_future(listen())
+        try:
+            await asyncio.gather(self.listen_future, future)
+        finally:
+            if self.ensure_quit:
+                if self.is_registered and self.writer is not None:
+                    self.send_command("QUIT", delay=False)
+            self.close_connection()
+            if not self.listen_future.done():
+                self.listen_future.cancel()
+            self._running = False
+
+    def run_blocking(self, coroutine):
+        """Runs :meth:`run` on the current event loop and blocks until it
+        finishes. This is a blocking method and should not be called from
+        asynchronous code (use :meth:`run` instead).
+        """
+
+    # Provided for limited backward compatibility.
+    def call_coroutine(self, coroutine):
+        self.run_blocking(coroutine)
+
+    async def wait_until_disconnected(self):
+        """Waits until the bot is disconnected from the IRC server. It is not
+        necessary to call this method, but it could be useful in some cases.
+        """
+        await self._listen_done.wait()
+
+    # Provided for limited backward compatibility.
+    def listen(self):
+        return self.wait_until_disconnected()
+
+    async def connect(
             self, hostname, port, ssl=False, extensions=True,
             client_cert=None):
-        if not self._first_use:
-            self.reset_irc_data()
-        self._first_use = False
+        """Connects to an IRC server.
+
+        :param str hostname: The hostname or IP address of the IRC server.
+        :param str port: The port of the IRC server.
+        :param bool ssl: Whether to use SSL/TLS. This can also be an
+          `ssl.SSLContext` object, in which case it will be used instead of the
+          default context.
+        :param bool extensions: If true, the bot will request some IRCv3
+          extensions using the ``CAP REQ`` command. Currently,
+          ``multi-prefix``, ``account-notify``, and ``extended-join`` will be
+          requested.
+        :param client_cert: A client SSL/TLS certificate to be used.
+          If this is a string, it is passed as the ``certfile`` argument to
+          :meth:`ssl.SSLContext.load_cert_chain`; otherwise, this should be
+          a tuple or list that contains the arguments to be passed to
+          :meth:`ssl.SSLContext.load_cert_chain`. ``ssl`` must be true.
+        """
+        if not self._running:
+            raise RuntimeError("IRCBot.run() must be called first")
 
         if ssl:
             if not isinstance(ssl, ssl_module.SSLContext):
@@ -1281,7 +1425,8 @@ class IRCBot:
 
         self.server_address = "{}:{}".format(hostname, port)
         self.reader, self.writer = await asyncio.open_connection(
-            hostname, port, loop=self.loop, ssl=ssl)
+            hostname, port, ssl=ssl,
+        )
         self.is_alive = True
         self.connected.set()
         if extensions:
@@ -1289,13 +1434,57 @@ class IRCBot:
             self.cap_req("account-notify")
             self.cap_req("extended-join")
 
-    async def sasl_auth_async(
+    async def sasl_auth(
             self, account=None, password=None, mechanism="PLAIN", **kwargs):
+        """Authenticate (log in to an account) using SASL. The IRCv3 extension
+        ``sasl`` must be supported by the server.
+
+        This method should be called after :meth:`connect`, but before
+        :meth:`register`.
+
+        :param str account: The account to log in to.
+        :param str password: The password for the account.
+        :param str mechanism: The SASL mechanism to use. Currently, the
+          supported mechanisms are "PLAIN" and "EXTERNAL". To use EXTERNAL
+          authentication, provide a client certificate (``client_cert``) when
+          calling :meth:`connect`, and do not provide ``account`` or
+          ``password`` to this method.
+        :param kwargs: Keyword arguments to be used by the specified SASL
+          mechanism. Some SASL mechanisms may need arguments other than
+          ``account`` and ``password``.
+        :raises WaitError: if authentication fails.
+        """
         await self.sasl.authenticate(account, password, mechanism, **kwargs)
 
-    async def register_async(
+    async def register(
             self, nickname, realname=None, username=None,
             password=None, mode="8", end_cap=True):
+        """Registers with the server. (Sends the ``NICK`` and ``USER``
+        commands.)
+
+        If ``nickname`` contains non-alphanumeric characters, it may be
+        necessary to provide a separate username (see the ``username``
+        parameter).
+
+        :param str nickname: The nickname to use. A `WaitError` is raised if
+          the nickname is already in use.
+        :param str realname: The real name to use. If not specified,
+          ``nickname`` will be used.
+        :param str username: The username to use. If not specified,
+          ``nickname`` will be used.
+        :param str password: If specified, a ``PASS`` message will be sent with
+          the given password. This can be used to log in to accounts on many
+          servers; however, if SASL is supported, it is better to use
+          :meth:`sasl_auth`.
+        :param str mode: The mode to use when sending the ``USER`` message.
+        :param bool end_cap: Whether or not to end IRCv3 capability negotiation
+          by sending a ``CAP END`` message. If any ``CAP LS`` or ``CAP REQ``
+          (requests IRCv3 extensions) messages have been sent, sending a ``CAP
+          END`` message is required, or registration will not complete. By
+          default, :meth:`connect` requests extensions and thus requires ``CAP
+          END`` to be sent.
+        :raises WaitError: if the nickname is already in use.
+        """
         realname = realname or nickname
         username = username or nickname
         self.pending_username = username
@@ -1317,335 +1506,13 @@ class IRCBot:
         if not result.success:
             raise result.to_exception("Could not register.")
 
-    async def _listen_async(self):
-        await self.connected.wait()
-        read_message = self.ensure_future(self.create_read_message())
-        delay_loop = self.ensure_future(self.delay_loop())
-        self.listen_futures |= {
-            read_message, delay_loop, self.new_listen_future,
-        }
-
-        async def cleanup():
-            self.is_alive = False
-            await cancel_futures(self.listen_futures)
-            self.reset()
-
-        while True:
-            done, pending = await asyncio.wait(
-                self.listen_futures, return_when=asyncio.FIRST_COMPLETED,
-                loop=self.loop
-            )
-
-            self.listen_futures -= set(done)
-            for future in done:
-                future.result()
-            if self.new_listen_future.done():
-                self.new_listen_future = self.loop.create_future()
-            if not read_message.done():
-                continue
-
-            message = read_message.result()
-            if message is not None:
-                call = self.call(Event, "any", *message)
-                self.listen_futures.add(self.ensure_future(call))
-                # Wait until every event has reached its first await
-                # (not including self.call()).
-                await self.wait_for_events_called()
-            # This will cause calls to self.read_message() to finish.
-            self.read_message_future.set_result(message)
-            if message is not None:
-                read_message_coro = self.create_read_message()
-
-            # Calls to self.wait_for() may have just finished. Give functions
-            # a chance to call events in response to this before moving on to
-            # the next message.
-            await self.wait_for_events_called()
-            if message is None:
-                await cleanup()
-                return
-            read_message = self.ensure_future(read_message_coro)
-            self.listen_futures.add(read_message)
-
-    def listen_async(self):
-        if self.listen_future is None:
-            self.logger.debug("Creating new _listen_async() future")
-            self.listen_future = self.ensure_future(self._listen_async())
-        return self.listen_future
-
-    async def await_with_listen(self, coroutine, wait_for_scheduled=False):
-        logger = self.logger.getChild("IRCBot.await_with_listen")
-        listen = self.listen_async()
-        coroutine = self.ensure_future(coroutine)
-        scheduled = self.ensure_future(
-            self.run_scheduled_coroutines(catch_listen_exc=True))
-
-        futures = {listen, coroutine, scheduled}
-        while not coroutine.done():
-            done, pending = await asyncio.wait(
-                futures, return_when=asyncio.FIRST_COMPLETED, loop=self.loop,
-            )
-
-            if listen.done() and listen.exception():
-                logger.debug("'listen' raised an exception")
-                logger.debug("Cancelling other coroutines")
-                await cancel_futures(futures - {listen})
-                # Without returning control to the event loop, the exception
-                # generated by `listen.result()` will be described as occurring
-                # during the handling of a CancelledError.
-                await asyncio.sleep(0)
-                listen.result()
-            futures = set(pending)
-            for future in done:
-                future.result()
-
-        logger.debug("'coroutine' is done")
-        if not scheduled.done():
-            if not wait_for_scheduled:
-                logger.debug("Cancelling 'scheduled'")
-                await cancel_future(scheduled)
-                return
-            logger.debug("Waiting for 'scheduled'")
-            await scheduled
-
-    def run_with_listen(self, coroutine, wait_for_scheduled=False):
-        self.run_until_complete(
-            self.await_with_listen(coroutine, wait_for_scheduled),
-        )
-
-    async def run_scheduled_coroutines(self, catch_listen_exc=False):
-        self.connected.wait()
-        listen = self.listen_async()
-
-        def process_scheduled():
-            for coroutine, stay_alive in self.scheduled_coroutines:
-                future = self.ensure_future(coroutine)
-                self.scheduled_futures[future] = stay_alive
-            self.scheduled_coroutines = set()
-            self.new_scheduled = self.loop.create_future()
-        process_scheduled()
-
-        while not listen.done():
-            done, pending = await asyncio.wait(
-                list(self.scheduled_futures) + [listen, self.new_scheduled],
-                return_when=asyncio.FIRST_COMPLETED, loop=self.loop,
-            )
-            for future in done:
-                self.scheduled_futures.pop(future, None)
-                if not (catch_listen_exc and future is listen):
-                    future.result()
-            if self.scheduled_coroutines:
-                process_scheduled()
-        self.logger.debug("'listen' in run_scheduled_coroutines() is done")
-
-        for future, stay_alive in list(self.scheduled_futures.items()):
-            if not stay_alive:
-                del self.scheduled_futures[future]
-                await cancel_future(future)
-        if self.scheduled_futures:
-            await self.gather(*self.scheduled_futures)
-
-    def connect(
-            self, hostname, port, ssl=False, extensions=True,
-            client_cert=None):
-        """Connects to an IRC server.
-
-        This method can be used synchronously or asynchronously. When called
-        from a coroutine, it must be awaited.
-
-        :param str hostname: The hostname or IP address of the IRC server.
-        :param str port: The port of the IRC server.
-        :param bool ssl: Whether to use SSL/TLS. This can also be an
-          `ssl.SSLContext` object, in which case it will be used instead of the
-          default context.
-        :param bool extensions: If true, the bot will request some IRCv3
-          extensions using the ``CAP REQ`` command. Currently,
-          ``multi-prefix``, ``account-notify``, and ``extended-join`` will be
-          requested.
-        :param client_cert: A client SSL/TLS certificate to be used.
-          If this is a string, it is passed as the ``certfile`` argument to
-          :meth:`ssl.SSLContext.load_cert_chain`; otherwise, this should be
-          a tuple or list that contains the arguments to be passed to
-          :meth:`ssl.SSLContext.load_cert_chain`. ``ssl`` must be true.
-        :returns: A coroutine if this method was called from another coroutine.
-          Otherwise, this method will block.
-        """
-        coroutine = self.connect_async(
-            hostname, port, ssl, extensions, client_cert)
-        if asyncio.Task.current_task(loop=self.loop) is not None:
-            return coroutine
-        self.run_until_complete(coroutine)
-
-    def sasl_auth(
-            self, account=None, password=None, mechanism="PLAIN", **kwargs):
-        """Authenticate (log in to an account) using SASL. The IRCv3 extension
-        ``sasl`` must be supported by the server.
-
-        This method should be called after :meth:`connect`, but before
-        :meth:`register`.
-
-        This method can be used synchronously or asynchronously. When called
-        from a coroutine, it must be awaited.
-
-        :param str account: The account to log in to.
-        :param str password: The password for the account.
-        :param str mechanism: The SASL mechanism to use. Currently, the
-          supported mechanisms are "PLAIN" and "EXTERNAL". To use EXTERNAL
-          authentication, provide a client certificate (``client_cert``) when
-          calling :meth:`connect`, and do not provide ``account`` or
-          ``password`` to this method.
-        :param kwargs: Keyword arguments to be used by the specified SASL
-          mechanism. Some SASL mechanisms may need arguments other than
-          ``account`` and ``password``.
-        :returns: A coroutine if the method was called from another coroutine.
-          Otherwise, this method will block.
-        :raises WaitError: if authentication fails.
-        """
-        coroutine = self.sasl_auth_async(
-            account, password, mechanism, **kwargs)
-        if asyncio.Task.current_task(loop=self.loop) is not None:
-            return coroutine
-        self.run_with_listen(coroutine)
-
-    def register(self, nickname, realname=None, username=None,
-                 password=None, mode="8", end_cap=True):
-        """Registers with the server. (Sends the ``NICK`` and ``USER``
-        commands.)
-
-        If ``nickname`` contains non-alphanumeric characters, it may be
-        necessary to provide a separate username (see the ``username``
-        parameter).
-
-        This method can be used synchronously or asynchronously. When called
-        from a coroutine, it must be awaited.
-
-        :param str nickname: The nickname to use. A `WaitError` is raised if
-          the nickname is already in use.
-        :param str realname: The real name to use. If not specified,
-          ``nickname`` will be used.
-        :param str username: The username to use. If not specified,
-          ``nickname`` will be used.
-        :param str password: If specified, a ``PASS`` message will be sent with
-          the given password. This can be used to log in to accounts on many
-          servers; however, if SASL is supported, it is better to use
-          :meth:`sasl_auth`.
-        :param str mode: The mode to use when sending the ``USER`` message.
-        :param bool end_cap: Whether or not to end IRCv3 capability negotiation
-          by sending a ``CAP END`` message. If any ``CAP LS`` or ``CAP REQ``
-          (requests IRCv3 extensions) messages have been sent, sending a ``CAP
-          END`` message is required, or registration will not complete. By
-          default, :meth:`connect` requests extensions and thus requires ``CAP
-          END`` to be sent.
-        :returns: A coroutine if this method was called from another coroutine.
-          Otherwise, this method will block.
-        :raises WaitError: if the nickname is already in use.
-        """
-        coroutine = self.register_async(
-            nickname, realname, username, password, mode)
-        if asyncio.Task.current_task(loop=self.loop) is not None:
-            return coroutine
-        self.run_with_listen(coroutine)
-
-    def listen(self):
-        """Listens for incoming messages and calls the appropriate events.
-
-        This method can be used synchronously or asynchronously. When called
-        from a coroutine, it must be awaited.
-
-        This method should be called after registering and setting up the bot.
-        """
-        if asyncio.Task.current_task(loop=self.loop) is not None:
-            return self.listen_async()
-        self.run_until_complete(self.gather(
-            self.listen_async(),
-            self.run_scheduled_coroutines(catch_listen_exc=True),
-        ))
-
-    def call_coroutine(self, coroutine):
-        """Calls the specified coroutine. This is useful when you want all of
-        your bot code to be asynchronous; for example::
-
-            async def coroutine():
-                await bot.connect("irc.example.com", 6667)
-                await bot.register("nickname")
-                # More code here...
-                await bot.listen()
-
-            bot = IRCBot()
-            bot.call_coroutine(coroutine())
-
-        :param awaitable coroutine: The coroutine or awaitable object to run.
-        """
-        self.run_with_listen(
-            ensure_coroutine_obj(coroutine), wait_for_scheduled=True,
-        )
-
-    def schedule_coroutine(self, coroutine, stay_alive=False):
-        """Schedules the specified coroutine to be run. The coroutine will be
-        run when control returns to the event loop (from synchronous code, when
-        a method like :meth:`listen` or :meth:`call_coroutine` is called, and
-        from asynchronous code, when an ``await`` expression is hit).
-
-        From synchronous code::
-
-            bot = IRCBot()
-            bot.connect("irc.example.com", 6667)
-            bot.register("nickname")
-            bot.schedule_coroutine(some_coroutine())
-            bot.listen()
-
-        From asynchronous code::
-
-            await bot.connect("irc.example.com", 6667)
-            await bot.register("nickname")
-            bot.schedule_coroutine(some_coroutine())
-            await bot.listen()
-
-        :param awaitable coroutine: The coroutine or awaitable object to run.
-        :param bool stay_alive: Whether or not the coroutine should continue
-          running when connection to the server is lost. If ``False``, the
-          coroutine will be cancelled. Blocking calls to `call_coroutine` and
-          `listen` will not return until there are no scheduled coroutines
-          running.
-        """
-        coroutine = ensure_coroutine_obj(coroutine)
-        self.scheduled_coroutines.add((coroutine, stay_alive))
-        self.new_scheduled.done() or self.new_scheduled.set_result(None)
-
-    def add_listen_future(self, future):
-        future = self.ensure_future(future)
-        self.listen_futures.add(future)
-        if not self.new_listen_future.done():
-            self.new_listen_future.set_result(None)
-
-    def run_until_complete(self, coroutine):
-        try:
-            self.loop.run_until_complete(coroutine)
-        except (Exception, KeyboardInterrupt, SystemExit) as e:
-            send_quit = (
-                self.quit_on_exit
-                if isinstance(e, (KeyboardInterrupt, SystemExit))
-                else self.quit_on_exception)
-            if send_quit and self.is_registered:
-                self.send_command("QUIT", delay=False)
-                self.close_connection()
-            cancel_tasks(self.loop)
-            raise
-
+    # Provided for limited backward compatibility.
     def ensure_future(self, coroutine):
-        """Calls :func:`asyncio.ensure_future` with the loop this bot is using.
+        return asyncio.ensure_future(coroutine)
 
-        :param awaitable coroutine: The coroutine or awaitable to use.
-        """
-        return asyncio.ensure_future(coroutine, loop=self.loop)
-
+    # Provided for limited backward compatibility.
     def gather(self, *coroutines):
-        """Calls :func:`asyncio.gather` with the loop this bot is using.
-        Additionally, coroutines are ensured to be awaited in the order
-        provided (but still simultaneously).
-
-        :param awaitable coroutine: The coroutine or awaitable to use.
-        """
-        return gather(*coroutines, loop=self.loop)
+        return gather(*coroutines)
 
     @classmethod
     def parse(cls, message):
@@ -1856,6 +1723,7 @@ class IRCBot:
             messages.append(Message(*message[:-1], string))
         return messages
 
+
 IRCBot.forward_account_attrs()
 
 
@@ -1868,6 +1736,7 @@ def pop_coroutines(objects):
             coroutines.insert(0, item)
             del objects[i]
     return coroutines
+
 
 DelayedMessage = namedtuple("DelayedMessage", [
     "message", "target", "future", "split",

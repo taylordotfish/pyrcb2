@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2015-2016, 2021 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -100,7 +100,7 @@ def iset_methods(cls):
 
 @istr_methods
 class IStr(str):
-    """A case-insensitive string class based on `IRC case rules`_. (``{}|^``
+    r"""A case-insensitive string class based on `IRC case rules`_. (``{}|^``
     are lowercase equivalents of ``[]\~``.)
 
     Equality comparisons are case-insensitive, but the original string is
@@ -244,14 +244,12 @@ class Sender(IStr):
 
     It shouldn't be necessary to create objects of this type.
     """
-    def __new__(cls, *args, **kwargs):
-        kwargs.pop("username", None)
-        kwargs.pop("hostname", None)
+    def __new__(cls, *args, username=None, hostname=None, **kwargs):
         return super().__new__(cls, *args, **kwargs)
 
-    def __init__(self, *args, **kwargs):
-        self._username = kwargs.pop("username", None)
-        self._hostname = kwargs.pop("hostname", None)
+    def __init__(self, *args, username=None, hostname=None, **kwargs):
+        self._username = username
+        self._hostname = hostname
         super().__init__(*args, **kwargs)
 
     @property
@@ -284,12 +282,11 @@ class User(IStr):
 
     It shouldn't be necessary to create objects of this type.
     """
-    def __new__(cls, *args, **kwargs):
-        kwargs.pop("prefixes", None)
+    def __new__(cls, *args, prefixes=None, **kwargs):
         return super().__new__(cls, *args, **kwargs)
 
-    def __init__(self, *args, **kwargs):
-        self._prefixes = frozenset(kwargs.pop("prefixes", ()))
+    def __init__(self, *args, prefixes=None, **kwargs):
+        self._prefixes = frozenset(prefixes or ())
         super().__init__(*args, **kwargs)
 
     @property

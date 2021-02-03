@@ -1,4 +1,4 @@
-.. Copyright (C) 2016 taylor.fish <contact@taylor.fish>
+.. Copyright (C) 2016, 2021 taylor.fish <contact@taylor.fish>
 
 .. This file is part of pyrcb2-docs, documentation for pyrcb2.
 
@@ -76,26 +76,24 @@ Initialization
 ~~~~~~~~~~~~~~
 
 .. automethod:: IRCBot.load_events
+.. automethod:: IRCBot.run
+.. automethod:: IRCBot.run_blocking
 .. automethod:: IRCBot.connect
 .. automethod:: IRCBot.sasl_auth
 .. automethod:: IRCBot.register
-.. automethod:: IRCBot.call_coroutine
-.. automethod:: IRCBot.schedule_coroutine
-.. automethod:: IRCBot.listen
 
 Other methods
 ~~~~~~~~~~~~~
 
 .. automethod:: IRCBot.any_event_handlers
-.. automethod:: IRCBot.call(event_id, \*args, \*\*kwargs)
+.. automethod:: IRCBot.call(event_class, event_id, \*args, \*\*kwargs)
 .. automethod:: IRCBot.wait_for
 .. automethod:: IRCBot.wait_for_all
 .. automethod:: IRCBot.close_connection
-.. automethod:: IRCBot.ensure_future
-.. automethod:: IRCBot.gather
 .. automethod:: IRCBot.safe_message_length
 .. automethod:: IRCBot.split_string
 .. automethod:: IRCBot.parse
+.. automethod:: IRCBot.wait_until_disconnected
 
 Attributes
 ~~~~~~~~~~
@@ -121,9 +119,7 @@ These attributes control the bot's behavior and may be modified.
    :annotation: = 120
 .. autoattribute:: IRCBot.use_hostname_when_splitting
    :annotation: = True
-.. autoattribute:: IRCBot.quit_on_exception
-   :annotation: = True
-.. autoattribute:: IRCBot.quit_on_exit
+.. autoattribute:: IRCBot.ensure_quit
    :annotation: = True
 .. autoattribute:: IRCBot.delay_messages
    :annotation: = True

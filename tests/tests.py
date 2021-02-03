@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2017 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2015-2017, 2021 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -26,8 +26,9 @@ from .mocks import MockClock, MockAsyncSleep
 from .mocks import MockOpenConnection, MockReader, MockWriter
 from .utils import async_tests, mock_event
 
-from pyrcb2 import IRCBot, Event, IStr, ISet, IDict, Message, WaitError, astdio
+from pyrcb2 import IRCBot, Event, IStr, ISet, IDict, Message, WaitError
 from pyrcb2.itypes import Sender
+from pyrcb2.utils import OptionalCoroutine
 import pyrcb2.pyrcb2
 import pyrcb2.utils
 
@@ -68,31 +69,27 @@ class BaseTest(TestCase):
 
 class BaseBotTest(BaseTest):
     @classmethod
-    def create_loop(cls):
-        return asyncio.new_event_loop()
-
-    @classmethod
-    def create_bot(cls, loop):
-        bot = IRCBot(loop=loop)
+    def create_bot(cls):
+        bot = IRCBot()
         bot.delay_messages = False
         bot.delay_privmsgs = False
         return bot
 
     def setUp(self):
-        self.loop = self.create_loop()
-        self.bot = self.create_bot(self.loop)
-        self.addCleanup(self.loop.close)
+        async def init():
+            self.clock = MockClock()
+            self.patch("time.monotonic", new=self.clock)
+            self.patch("time.time", new=self.clock)
+            mock_sleep = MockAsyncSleep(self.clock)
+            self.patch("asyncio.sleep", new=mock_sleep)
+            self.reader = MockReader()
+            self.writer = MockWriter(self.clock, self.reader)
+            mock_open_connection = MockOpenConnection(self.reader, self.writer)
+            self.patch("asyncio.open_connection", new=mock_open_connection)
 
-        self.clock = MockClock(loop=self.loop)
-        self.patch("time.monotonic", new=self.clock)
-        self.patch("time.time", new=self.clock)
-        mock_sleep = MockAsyncSleep(self.clock)
-        self.patch("asyncio.sleep", new=mock_sleep)
-        self.reader = MockReader(loop=self.loop)
-        self.writer = MockWriter(self.clock, self.reader, loop=self.loop)
-        mock_open_connection = MockOpenConnection(
-            self.reader, self.writer, loop=self.loop)
-        self.patch("asyncio.open_connection", new=mock_open_connection)
+        loop = asyncio.get_event_loop()
+        self.bot = self.create_bot()
+        loop.run_until_complete(init())
 
     async def async_setup(self):
         await self.bot.connect("irc.example.com", 6667)
@@ -118,7 +115,7 @@ class BaseBotTest(BaseTest):
     def from_server(self, *lines):
         for line in lines:
             self.reader.add_line(line)
-        return self.handle_lines()
+        return OptionalCoroutine(self.handle_lines)
 
     def handle_lines(self):
         return self.reader.lines_empty.wait()
@@ -134,8 +131,7 @@ class BaseBotTest(BaseTest):
             if inspect.isawaitable(result):
                 await result
             self.bot.close_connection()
-            await self.bot.listen()
-        self.bot.call_coroutine(coroutine())
+        asyncio.get_event_loop().run_until_complete(self.bot.run(coroutine()))
 
     def clear_sent(self):
         self.writer.lines.clear()
@@ -173,7 +169,7 @@ class BaseBotTest(BaseTest):
 @async_tests
 class TestCommands(BaseBotTest):
     async def test_join(self):
-        future = self.bot.ensure_future(self.bot.join("#channel3"))
+        future = asyncio.ensure_future(self.bot.join("#channel3"))
         self.assertSent("JOIN :#channel3")
         await self.from_server(":self JOIN :#channel3")
         await self.from_server(":server 353 self @ #channel3 :user2 self")
@@ -187,7 +183,7 @@ class TestCommands(BaseBotTest):
         self.assertCountEqual(users, ISet({"self", "user2"}))
 
     async def test_join_extended(self):
-        future = self.bot.ensure_future(self.bot.join("#channel3"))
+        future = asyncio.ensure_future(self.bot.join("#channel3"))
         await self.from_server(":self JOIN #channel3 acc1 :realname")
         await self.from_server(":server 353 self @ #channel3 :user2 self")
         await self.from_server(":server 366 self #channel3 :End of names")
@@ -237,7 +233,7 @@ class TestCommands(BaseBotTest):
         self.assertEqual(self.bot.nickname, "self2")
 
     async def test_whois(self):
-        future = self.bot.ensure_future(self.bot.whois("user1"))
+        future = asyncio.ensure_future(self.bot.whois("user1"))
         self.assertSent("WHOIS :user1")
         await self.from_server(
             ":server 311 self user1 user host * :realname",
@@ -524,35 +520,21 @@ class TestConnect(BaseBotTest):
         await self.bot.connect("irc.example.com", 6667)
         self.clear_sent()
 
-    def test_connect(self):
-        self.assertFalse(self.bot.is_alive)
-        self.bot.connect("irc.example.com", 6667)
-        self.assertTrue(self.bot.is_alive)
-        self.assertCalledOnce(
-            asyncio.open_connection, "irc.example.com", 6667,
-            loop=self.loop, ssl=False)
-        self.assertSent(
-            "CAP REQ :multi-prefix", "CAP REQ :account-notify",
-            "CAP REQ :extended-join",
-        )
-
-    async def test_connect_async(self):
+    async def test_connect(self):
         self.assertFalse(self.bot.is_alive)
         await self.bot.connect("irc.example.com", 6667)
         self.assertTrue(self.bot.is_alive)
         self.assertCalledOnce(
-            asyncio.open_connection, "irc.example.com", 6667,
-            loop=self.loop, ssl=False)
+            asyncio.open_connection, "irc.example.com", 6667, ssl=False)
         self.assertSent(
             "CAP REQ :multi-prefix", "CAP REQ :account-notify",
             "CAP REQ :extended-join",
         )
 
-    def test_connect_ssl(self):
-        self.bot.connect("irc.example.com", 6697, ssl=True)
+    async def test_connect_ssl(self):
+        await self.bot.connect("irc.example.com", 6697, ssl=True)
         self.assertCalledOnce(
-            asyncio.open_connection, "irc.example.com", 6697, loop=self.loop,
-            ssl=mock.ANY)
+            asyncio.open_connection, "irc.example.com", 6697, ssl=mock.ANY)
         context = asyncio.open_connection.call_args[1]["ssl"]
         self.assertIsInstance(context, ssl.SSLContext)
 
@@ -567,31 +549,27 @@ class TestConnect(BaseBotTest):
             "irc.example.com", 6697, ssl=context,
             client_cert=("/certfile", "/keyfile", "password"))
         self.assertCalledOnce(
-            asyncio.open_connection, "irc.example.com", 6697, loop=self.loop,
-            ssl=context)
+            asyncio.open_connection, "irc.example.com", 6697, ssl=context)
         self.assertCalledOnce(
             context.load_cert_chain, "/certfile", "/keyfile", "password")
 
     async def test_connect_no_extensions(self):
         await self.bot.connect("irc.example.com", 6667, extensions=False)
         self.assertCalledOnce(
-            asyncio.open_connection, "irc.example.com", 6667,
-            loop=self.loop, ssl=False)
+            asyncio.open_connection, "irc.example.com", 6667, ssl=False)
         self.assertSent()  # Nothing should have been sent.
 
-    def test_sasl_auth(self):
-        self.bot.connect("irc.example.com", 6667, extensions=False)
+    async def test_sasl_auth(self):
+        await self.bot.connect("irc.example.com", 6667, extensions=False)
         self.from_server(
             ":server CAP * ACK :sasl",
             ":server AUTHENTICATE :+",
             ":server 903 * :SASL authentication successful")
-        self.bot.sasl_auth("account", "password")
+        await self.bot.sasl_auth("account", "password")
         self.assertSent(
             "CAP REQ :sasl",
             "AUTHENTICATE :PLAIN",
             "AUTHENTICATE :YWNjb3VudABhY2NvdW50AHBhc3N3b3Jk")
-        self.bot.close_connection()
-        self.bot.listen()
 
     async def test_sasl_auth_fail(self):
         await self.bot.connect("irc.example.com", 6667, extensions=False)
@@ -612,15 +590,6 @@ class TestConnect(BaseBotTest):
         await self.bot.sasl_auth(mechanism="EXTERNAL")
         self.assertSent(
             "CAP REQ :sasl", "AUTHENTICATE :EXTERNAL", "AUTHENTICATE :+")
-
-    def test_register(self):
-        self.bot.connect("irc.example.com", 6667)
-        self.clear_sent()
-        self.from_server(":server 001 self1 :Welcome")
-        self.bot.register("self1")
-        self.assertSent("CAP :END", "NICK :self1", "USER self1 8 * :self1")
-        self.bot.close_connection()
-        self.bot.listen()
 
     async def test_register_async(self):
         await self.connect_bot()
@@ -650,7 +619,7 @@ class TestDelay(BaseBotTest):
 
     async def test_privmsg_delay(self):
         # Ensure consecutive messages count resets to 0.
-        await asyncio.sleep(10, loop=self.loop)  # Mocked; won't actually wait.
+        await asyncio.sleep(10)  # Mocked; won't actually wait.
         expected_time = time.monotonic()
         for i in range(30):
             await self.bot.privmsg("user1", "Message %s" % i)
@@ -664,13 +633,13 @@ class TestDelay(BaseBotTest):
             self.assertEqual(msg, expected_msg)
             self.assertAlmostEqual(msg_time, expected_time)
 
-        await asyncio.sleep(10, loop=self.loop)
+        await asyncio.sleep(10)
         self.assertIn("user1", self.bot.last_sent)
         await self.bot.privmsg("user2", "Message")
         self.assertNotIn("user1", self.bot.last_sent)
 
     async def test_delay(self):
-        await asyncio.sleep(10, loop=self.loop)
+        await asyncio.sleep(10)
         expected_time = time.monotonic()
         for i in range(30):
             await self.bot.send_command("COMMAND", "arg", i)
@@ -684,13 +653,17 @@ class TestDelay(BaseBotTest):
             self.assertAlmostEqual(msg_time, expected_time)
 
 
+@async_tests
 class TestMisc(BaseBotTest):
     @classmethod
-    def create_bot(cls, loop, **kwargs):
-        bot = IRCBot(loop=loop, **kwargs)
+    def create_bot(cls, **kwargs):
+        bot = IRCBot(**kwargs)
         bot.delay_messages = False
         bot.delay_privmsgs = False
         return bot
+
+    async def async_setup(self):
+        pass
 
     def test_parse(self):
         message = IRCBot.parse(
@@ -763,10 +736,13 @@ class TestMisc(BaseBotTest):
 
     def test_logging_setup(self):
         self.patch("logging.basicConfig", spec=True)
-        self.bot = self.create_bot(
-            log_communication=True, log_debug=True,
-            log_kwargs={"stream": sys.stdout, "arg": "value"},
-            loop=self.loop)
+
+        async def coroutine():
+            self.bot = self.create_bot(
+                log_communication=True, log_debug=True,
+                log_kwargs={"stream": sys.stdout, "arg": "value"})
+
+        asyncio.get_event_loop().run_until_complete(coroutine())
         self.assertEqual(logging.basicConfig.call_count, 1)
         args, kwargs = logging.basicConfig.call_args
         self.assertEqual(args, ())
@@ -789,18 +765,18 @@ class TestMisc(BaseBotTest):
         async def on_xyz(self):
             raise TestException
 
-        self.bot.connect("irc.example.com", 6667)
-        self.from_server(":server 001 self :Welcome")
-        self.bot.register("self")
-        self.clear_sent()
-        self.from_server("XYZ")
+        async def run():
+            await self.bot.connect("irc.example.com", 6667)
+            self.from_server(":server 001 self :Welcome")
+            await self.bot.register("self")
+            self.clear_sent()
+            self.from_server("XYZ")
+
         with self.assertRaises(TestException):
-            async def coroutine():
-                await self.bot.listen()
-            self.bot.call_coroutine(coroutine())
+            asyncio.get_event_loop().run_until_complete(self.bot.run(run()))
         self.assertSent("QUIT")
 
-    async def _test_call_single(self):
+    async def test_call_single(self):
         async def _function(a, b, c):
             pass
         function = mock.Mock(wraps=_function)
@@ -821,53 +797,41 @@ class TestMisc(BaseBotTest):
         await self.bot.call_single(function, [1, 2, 3, 4], dict(d=5))
         self.assertCalled(function, 1, 2, 3, 4, c=None, d=5)
 
-    def test_call_single(self):
-        self.loop.run_until_complete(self._test_call_single())
-
     def test_reuse(self):
-        def setup():
-            self.reader.alive = True
-            self.bot.connect("irc.example.com", 6667)
+        async def setup():
+            await self.bot.connect("irc.example.com", 6667)
             self.from_server(":server CAP * ACK account-notify")
             self.from_server(":server 001 self :Welcome")
-            self.bot.register("self")
+            await self.bot.register("self")
 
-        setup()
-        self.from_server(
-            ":self JOIN #channel",
-            ":server 353 self @ #channel :self user1",
-            ":server 366 self #channel :End of names", None)
-        self.bot.listen()
+        async def run1():
+            await setup()
+            self.from_server(
+                ":self JOIN #channel",
+                ":server 353 self @ #channel :self user1",
+                ":server 366 self #channel :End of names",
+                None)
+
+        async def run2():
+            await setup()
+            self.assertNotInChannel("#channel")
+            self.from_server(None)
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.bot.run(run1()))
         self.assertInChannel("#channel")
         account_tracker = self.bot.account_tracker
         self.assertTrue(account_tracker.tracked_users)
 
-        setup()
-        self.assertNotInChannel("#channel")
-        self.from_server(None)
-        self.bot.listen()
+        self.reader.reset()
+        loop.run_until_complete(self.bot.run(run2()))
         self.assertIs(self.bot.account_tracker, account_tracker)
         self.assertFalse(account_tracker.tracked_users)
 
-    def test_astdio(self):
-        py_input = mock.Mock(spec=input, return_value="xyz")
-        py_print = mock.Mock(spec=print, return_value=None)
-        self.patch("pyrcb2.astdio._py_input", new=py_input)
-        self.patch("pyrcb2.astdio._py_print", new=py_print)
-
-        async def coroutine():
-            line = await astdio.input(loop=self.loop)
-            self.assertEqual(line, "xyz")
-            await astdio.print("abc", loop=self.loop)
-
-        self.loop.run_until_complete(coroutine())
-        self.assertCalledOnce(py_input)
-        self.assertCalledOnce(py_print, "abc")
-
 
 def main():
-    asyncio.set_event_loop(None)
     unittest.main()
+
 
 if __name__ == "__main__":
     main()

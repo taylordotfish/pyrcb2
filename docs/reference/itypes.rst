@@ -61,7 +61,7 @@ ISet
 User
 ----
 
-.. autoclass:: User(\*args, prefixes=None, \*\*kwargs)
+.. autoclass:: User
 
    .. automethod:: has_prefix
    .. autoattribute:: prefixes
@@ -70,7 +70,7 @@ User
 Sender
 ------
 
-.. autoclass:: Sender(\*args, username=None, hostname=None, \*\*kwargs)
+.. autoclass:: Sender
 
    .. autoattribute:: username
    .. autoattribute:: hostname

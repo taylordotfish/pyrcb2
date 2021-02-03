@@ -1,4 +1,4 @@
-# Copyright (C) 2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2016, 2021 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -33,10 +33,11 @@ import inspect
 import logging
 import sys
 
-__all__ = ["optargs", "cancel_tasks", "cancel_future", "cancel_future",
-           "cancel_futures", "reply_name_to_command", "ensure_list",
-           "ensure_coroutine_obj", "gather", "get_argument_info",
-           "OptionalCoroutine", "forward_attrs", "StreamHandler", "Sentinel"]
+__all__ = ["optargs", "cancel_tasks", "create_future", "cancel_future",
+           "cancel_future", "cancel_futures", "reply_name_to_command",
+           "ensure_list", "ensure_coroutine_obj", "gather",
+           "get_argument_info", "OptionalCoroutine", "forward_attrs",
+           "StreamHandler", "Sentinel"]
 
 
 # Filters out arguments that are None and returns an iterable.
@@ -44,8 +45,12 @@ def optargs(*args):
     return (arg for arg in args if arg is not None)
 
 
+def create_future():
+    return asyncio.get_running_loop().create_future()
+
+
 def cancel_tasks(loop):
-    tasks = asyncio.Task.all_tasks(loop=loop)
+    tasks = asyncio.all_tasks(loop=loop)
     for task in (t for t in tasks if not t.done()):
         task.cancel()
         try:
@@ -90,10 +95,9 @@ def ensure_coroutine_obj(coroutine):
 
 
 # Like asyncio.gather(), but ensures that coroutines are called in order.
-async def gather(*coroutines, loop=None, **kwargs):
+async def gather(*coroutines, **kwargs):
     return await asyncio.gather(
-        *(asyncio.ensure_future(coro, loop=loop) for coro in coroutines),
-        loop=loop, **kwargs,
+        *(asyncio.ensure_future(coro) for coro in coroutines), **kwargs,
     )
 
 

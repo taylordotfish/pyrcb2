@@ -16,15 +16,13 @@ class MyBot:
         self.bot = IRCBot(log_communication=True)
         self.bot.load_events(self)
 
-    def start(self):
-        self.bot.call_coroutine(self.start_async())
-
-    async def start_async(self):
-        await self.bot.connect("irc.example.com", 6667)
-        await self.bot.register("timebot")
-        await self.bot.join("#timebot")
-        self.bot.schedule_coroutine(self.auto_time_loop(10*60))
-        await self.bot.listen()
+    async def run(self):
+        async def init():
+            await self.bot.connect("irc.example.com", 6667)
+            await self.bot.register("timebot")
+            await self.bot.join("#timebot")
+            await self.auto_time_loop(10 * 60)
+        await self.bot.run(init())
 
     @Event.privmsg
     async def on_privmsg(self, sender, channel, message):
@@ -68,12 +66,13 @@ class MyBot:
                 self.bot.privmsg(channel, "(auto) " + time)
 
 
-def main():
+async def main():
     mybot = MyBot()
-    mybot.start()
+    await mybot.run()
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 
 # Example IRC log:

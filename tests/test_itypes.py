@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2015-2016, 2021 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -124,6 +124,7 @@ class TestItypes(BaseTest):
 
 def main():
     unittest.main()
+
 
 if __name__ == "__main__":
     main()

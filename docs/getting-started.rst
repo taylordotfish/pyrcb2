@@ -1,4 +1,4 @@
-.. Copyright (C) 2016 taylor.fish <contact@taylor.fish>
+.. Copyright (C) 2016, 2021 taylor.fish <contact@taylor.fish>
 
 .. This file is part of pyrcb2-docs, documentation for pyrcb2.
 
@@ -35,6 +35,10 @@ Begin by importing `IRCBot` and `Event` from ``pyrcb2``::
 
     from pyrcb2 import IRCBot, Event
 
+We'll also import ``asyncio``, which we'll need later::
+
+    import asyncio
+
 Then we'll create our bot class, called ``MyBot``::
 
     class MyBot:
@@ -47,39 +51,37 @@ in ``self.bot``. ``log_communication=True`` will cause communication with the
 server to be logged to standard output (often useful when debugging).
 
 ``self.bot.load_events(self)`` loads events that are part of the current
-``MyBot`` object. We'll add some events later.
-
-There are a number of ways to start a bot, but this is the preferred way,
-because it allows all bot initialization code to be run asynchronously::
+``MyBot`` object. We'll add some events later. First, we'll create a method
+that starts and runs our bot::
 
     class MyBot:
         def __init__(self):
             self.bot = IRCBot(log_communication=True)
             self.bot.load_events(self)
 
-        def start(self):
-            self.bot.call_coroutine(self.start_async())
+        async def run(self):
+            async def init():
+                await self.bot.connect("irc.example.com", 6667)
+                await self.bot.register("mybot")
+                # More code here (optional)...
+            await self.bot.run(init())
 
-        async def start_async(self):
-            await self.bot.connect("irc.example.com", 6667)
-            await self.bot.register("mybot")
-            # More code here (optional)...
-            await self.bot.listen()
+:meth:`IRCBot.run` (``self.bot.run()``) must be called before we use any other
+methods like :meth:`~IRCBot.connect` and :meth:`~IRCBot.register`. It accepts a
+coroutine as a parameter---that coroutine can call :meth:`~IRCBot.connect` and
+so on. :meth:`IRCBot.run` will keep running until the bot is disconnected from
+the server.
 
-``MyBot.start()`` is the actual method we'll call to start the bot. It simply
-runs ``MyBot.start_async()`` on the asyncio event loop and blocks until it
-completes.
-
-In place of the "More code here" comment in ``start_async()``, we could call
-methods like ``self.bot.join("#mybot")`` if we wanted the bot to do something
-right after starting up.
+In place of the "More code here" comment in the inner ``init()`` function, we
+could call methods like ``self.bot.join("#mybot")`` if we wanted the bot to do
+something right after starting up.
 
 Next, let's add an event to our bot. Events are methods decorated with
 `Event` decorators. To add an event that gets called every time a message
 (``PRIVMSG``) is received, we could add the following method to ``MyBot``::
 
     @Event.privmsg
-    def on_privmsg(self, sender, channel, message):
+    async def on_privmsg(self, sender, channel, message):
         if channel is None:
             # Message was sent in a private query.
             self.bot.privmsg(sender, "You said: " + message)
@@ -88,9 +90,8 @@ Next, let's add an event to our bot. Events are methods decorated with
         # Message was sent in a channel.
         self.bot.privmsg(channel, sender + " said: " + message)
 
-
-Event handlers can also be coroutines, allowing you to write asynchronous code.
-Let's add an asynchronous event handler for ``JOIN`` messages::
+Let's also add an event handler for ``JOIN`` messages. We can use ``await``
+inside ``async def`` event handlers::
 
     @Event.join
     async def on_join(self, sender, channel):
@@ -102,7 +103,6 @@ Let's add an asynchronous event handler for ``JOIN`` messages::
         # This will execute a WHOIS request for `sender` and will
         # block until the request is complete. Since this is a
         # coroutine, the rest of the bot won't freeze up.
-
         result = await self.bot.whois(sender)
         if result.success:
             whois_reply = result.value
@@ -116,19 +116,24 @@ using ``await`` allows us to wait for the WHOIS response before continuing.
 Otherwise, we would need to add an `Event.whois` event handler, which would
 split up our code and introduce problems keeping state.
 
-Our main function is simple; it simply creates a ``MyBot`` object and starts
-it::
+Our ``main()`` function is simple; it simply creates a ``MyBot`` object and
+calls ``MyBot.run()``::
 
-    def main():
+    async def main():
         mybot = MyBot()
-        mybot.start()
+        await mybot.run()
+
+However, since our ``main()`` function is ``async``, we can't just call it
+directly---we have to run it in an event loop. The simplest way to do this is
+to use :func:`asyncio.run`::
 
     if __name__ == "__main__":
-        main()
+        asyncio.run(main())
 
 Our finished bot now looks like this::
 
     from pyrcb2 import IRCBot, Event
+    import asyncio
 
 
     class MyBot:
@@ -136,17 +141,15 @@ Our finished bot now looks like this::
             self.bot = IRCBot(log_communication=True)
             self.bot.load_events(self)
 
-        def start(self):
-            self.bot.call_coroutine(self.start_async())
-
-        async def start_async(self):
-            await self.bot.connect("irc.example.com", 6667)
-            await self.bot.register("mybot")
-            # More code here (optional)...
-            await self.bot.listen()
+        async def run(self):
+            async def init():
+                await self.bot.connect("irc.example.com", 6667)
+                await self.bot.register("mybot")
+                # More code here (optional)...
+            await self.bot.run(init())
 
         @Event.privmsg
-        def on_privmsg(self, sender, channel, message):
+        async def on_privmsg(self, sender, channel, message):
             if channel is None:
                 # Message was sent in a private query.
                 self.bot.privmsg(sender, "You said: " + message)
@@ -165,7 +168,6 @@ Our finished bot now looks like this::
             # This will execute a WHOIS request for `sender` and will
             # block until the request is complete. Since this is a
             # coroutine, the rest of the bot won't freeze up.
-
             result = await self.bot.whois(sender)
             if result.success:
                 whois_reply = result.value
@@ -174,12 +176,13 @@ Our finished bot now looks like this::
                 self.privmsg(channel, msg)
 
 
-    def main():
+    async def main():
         mybot = MyBot()
-        mybot.start()
+        await mybot.run()
+
 
     if __name__ == "__main__":
-        main()
+        asyncio.run(main())
 
 If we run our bot, it will work like this in channels:
 
@@ -217,6 +220,6 @@ And it will work like this in private queries:
    `examples/example.py`__
       The finished bot created above.
 
-__ https://github.com/taylordotfish/pyrcb2/tree/master/examples/
-__ https://github.com/taylordotfish/pyrcb2/blob/master/examples/skeleton.py
-__ https://github.com/taylordotfish/pyrcb2/blob/master/examples/example.py
+__ https://github.com/taylordotfish/pyrcb2/tree/0.6.0/examples/
+__ https://github.com/taylordotfish/pyrcb2/blob/0.6.0/examples/skeleton.py
+__ https://github.com/taylordotfish/pyrcb2/blob/0.6.0/examples/example.py

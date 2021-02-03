@@ -1,4 +1,4 @@
-.. Copyright (C) 2016 taylor.fish <contact@taylor.fish>
+.. Copyright (C) 2016, 2021 taylor.fish <contact@taylor.fish>
 
 .. This file is part of pyrcb2-docs, documentation for pyrcb2.
 
@@ -100,8 +100,8 @@ coroutine function and return it in an `OptionalCoroutine`::
             # Return an optional coroutine.
             return OptionalCoroutine(coroutine)
 
-If you're writing a method that should be called only asynchronously, you
-can skip the inner function and simply make the method a coroutine::
+If you're writing a method that must be awaited, you can skip the inner
+function and simply make the method a coroutine::
 
     class MyBot:
         # Initialization code here...
@@ -120,7 +120,7 @@ To add an event handler for an arbitrary IRC command, use
 :func:`@Event.command <Event.command>`::
 
     @Event.command("INVITE")
-    def on_invite(sender, target: IStr, channel: IStr):
+    async def on_invite(sender, target: IStr, channel: IStr):
         # Code here...
 
 (Remember to include the ``self`` parameter if your event handler is a method.)
@@ -136,7 +136,7 @@ above.
 You can use :func:`@Event.reply <Event.reply>` to handle numeric replies::
 
     @Event.reply("RPL_TOPIC")
-    def on_rpl_topic(sender, target, channel, topic):
+    async def on_rpl_topic(sender, target, channel, topic):
         # Code here...
 
 
@@ -160,7 +160,7 @@ and the event ID it uses equal to the string. ::
         # self.bot is an IRCBot object.
 
         @Event.self_invited
-        def on_self_invited(self, sender, channel):
+        async def on_self_invited(self, sender, channel):
             print(sender, "has invited this bot to", channel)
 
         @Event.command("INVITE")
@@ -186,11 +186,11 @@ parameters to your decorator. ::
         # self.bot is an IRCBot object.
 
         @Event.user_invited("user1")
-        def on_user1_invited(self, sender, channel):
+        async def on_user1_invited(self, sender, channel):
             print(sender, "has invited user1 to", channel)
 
         @Event.user_invited("user2")
-        def on_user2_invited(self, sender, channel):
+        async def on_user2_invited(self, sender, channel):
             print(sender, "has invited user2 to", channel)
 
         @Event.command("INVITE")
@@ -212,22 +212,20 @@ Here is an example bot that sends and handles custom commands::
             self.bot.load_events(self)
 
         @Event.command("INVITE")
-        def on_invite(self, sender, target: IStr, channel: IStr):
+        async def on_invite(self, sender, target: IStr, channel: IStr):
             print(sender, "has invited", target, "to", channel)
 
         @Event.privmsg
-        def on_privmsg(self, sender, channel, message):
+        async def on_privmsg(self, sender, channel, message):
             if channel is None and message == "!invite":
                 self.bot.send_command("INVITE", sender, "#channel")
 
-        def start(self):
-            self.bot.call_coroutine(self.start_async())
-
-        async def start_async(self):
-            await self.bot.connect("irc.example.com", 6667)
-            await self.bot.register("mybot")
-            self.bot.join("#channel")
-            await self.bot.listen()
+        async def run(self):
+            with self.bot:
+                await self.bot.connect("irc.example.com", 6667)
+                await self.bot.register("mybot")
+                self.bot.join("#channel")
+                await self.bot.listen()
 
     mybot = MyBot()
-    mybot.start()
+    await mybot.run()

@@ -1,4 +1,4 @@
-/* Copyright (C) 2015-2016 taylor.fish <contact@taylor.fish>
+/* Copyright (C) 2015-2016, 2021 taylor.fish <contact@taylor.fish>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,4 +61,8 @@ a.reference.external code.docutils.literal {
 
 a.reference.external code.docutils.literal:hover {
     background-color: #eeeeee;
+}
+
+dl > dd, dl > dd:last-child {
+    margin-bottom: 10px;
 }

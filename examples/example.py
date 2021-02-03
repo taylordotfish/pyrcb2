@@ -8,6 +8,7 @@
 # CC0 Public Domain Dedication.
 
 from pyrcb2 import IRCBot, Event
+import asyncio
 
 
 class MyBot:
@@ -15,17 +16,15 @@ class MyBot:
         self.bot = IRCBot(log_communication=True)
         self.bot.load_events(self)
 
-    def start(self):
-        self.bot.call_coroutine(self.start_async())
-
-    async def start_async(self):
-        await self.bot.connect("irc.example.com", 6667)
-        await self.bot.register("mybot")
-        # More code here (optional)...
-        await self.bot.listen()
+    async def run(self):
+        async def init():
+            await self.bot.connect("irc.example.com", 6667)
+            await self.bot.register("mybot")
+            # More code here (optional)...
+        await self.bot.run(init())
 
     @Event.privmsg
-    def on_privmsg(self, sender, channel, message):
+    async def on_privmsg(self, sender, channel, message):
         if channel is None:
             # Message was sent in a private query.
             self.bot.privmsg(sender, "You said: " + message)
@@ -44,7 +43,6 @@ class MyBot:
         # This will execute a WHOIS request for `sender` and will
         # block until the request is complete. Since this is a
         # coroutine, the rest of the bot won't freeze up.
-
         result = await self.bot.whois(sender)
         if result.success:
             whois_reply = result.value
@@ -53,12 +51,13 @@ class MyBot:
             self.privmsg(channel, msg)
 
 
-def main():
+async def main():
     mybot = MyBot()
-    mybot.start()
+    await mybot.run()
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
 
 # Example IRC log:

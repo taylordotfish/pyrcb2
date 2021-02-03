@@ -1,4 +1,4 @@
-# Copyright (C) 2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2016, 2021 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -26,11 +26,12 @@ from .decorators import cast_args, document_attr
 from .events import Event
 from .itypes import IStr, IDict, ISet
 from .messages import Message, Reply, ANY, SELF, WaitResult, MultiWaitResult
-from .utils import Sentinel
+from .utils import Sentinel, create_future, gather
 from . import numerics
 
 from collections.abc import Iterable
 from enum import IntEnum
+import asyncio
 import re
 import time
 
@@ -66,6 +67,7 @@ class Status(IntEnum):
     unrecognized = 1
     recognized = 2
     logged_in = 3
+
 
 _statuses = set(Status)
 NONE = Sentinel("NONE")
@@ -240,13 +242,13 @@ class AccountTracker:
         return self._whox_pending.get(channel)
 
     def set_id_status_pending(self, nickname):
-        self._id_status_pending[nickname] = self.bot.loop.create_future()
+        self._id_status_pending[nickname] = create_future()
 
     def set_account_pending(self, nickname):
-        self._account_pending[nickname] = self.bot.loop.create_future()
+        self._account_pending[nickname] = create_future()
 
     def set_whox_pending(self, channel):
-        self._whox_pending[channel] = self.bot.loop.create_future()
+        self._whox_pending[channel] = create_future()
 
     def set_id_status_done(self, nickname, value):
         if nickname in self._id_status_pending:
@@ -333,13 +335,13 @@ class AccountTracker:
             if acc_matched != status_matched:
                 self.use_acc = acc_matched
                 self.use_status = status_matched
-        coroutines and await self.bot.gather(*coroutines)
+        coroutines and await gather(*coroutines)
 
     async def discover_id_command(self):
         self.logger.debug("Discovering NickServ ID status command")
         nickname = self.bot.nickname
         # Wait for messages to be sent.
-        await self.bot.gather(
+        await gather(
             self.bot.privmsg("NickServ", "ACC {} *".format(nickname)),
             self.bot.privmsg("NickServ", "STATUS {}".format(nickname)),
         )
@@ -377,7 +379,7 @@ class AccountTracker:
         if use_cache and self.is_id_status_synced(nickname):
             self.logger.debug("Returning cached ID status for %s", nickname)
             status = self.id_statuses[nickname]
-            future = self.bot.loop.create_future()
+            future = create_future()
             future.set_result(WaitResult(True, status))
             return future
 
@@ -390,7 +392,7 @@ class AccountTracker:
             if self.use_acc and self.use_status:
                 future = self._discover_future
                 if future is None or future.done():
-                    future = self.bot.ensure_future(self.discover_id_command())
+                    future = asyncio.ensure_future(self.discover_id_command())
                     self._discover_future = future
                 await self._discover_future
 
@@ -403,7 +405,7 @@ class AccountTracker:
                 futures.append(self.bot.privmsg(
                     "NickServ", "STATUS {}".format(nickname),
                 ))
-            await self.bot.gather(*futures)
+            await gather(*futures)
 
             def matches_acc(message):
                 match = re.match(r"([^ ]*) ACC \d", message)
@@ -452,7 +454,7 @@ class AccountTracker:
             if is_channel else chan_or_nicks
         ) - ({self.bot.nickname} if is_channel and no_self else set())
 
-        statuses_coro = self.bot.gather(*(
+        statuses_coro = gather(*(
             self.get_id_status(nickname, use_cache, use_pending)
             for nickname in nicknames
         ))
@@ -550,7 +552,7 @@ class AccountTracker:
                 self.accounts[nickname] = account
 
         for coroutine in coroutines:
-            future = self.bot.ensure_future(coroutine)
+            future = asyncio.ensure_future(coroutine)
             self.bot.add_listen_future(future)
         return accounts
 
@@ -565,7 +567,7 @@ class AccountTracker:
             account = whois_reply.account
             coroutines |= self.get_coroutines(nickname, new_account=account)
             self.accounts[nickname] = account
-        coroutines and await self.bot.gather(*coroutines)
+        coroutines and await gather(*coroutines)
 
     @cast_args
     def get_account(self, nickname: IStr, use_cache=True, use_pending=True):
@@ -589,7 +591,7 @@ class AccountTracker:
         if use_cache and self.is_account_synced(nickname):
             self.logger.debug("Returning cached account for %s", nickname)
             account = self.accounts[nickname]
-            future = self.bot.loop.create_future()
+            future = create_future()
             future.set_result(WaitResult(True, account))
             return future
 
@@ -615,7 +617,7 @@ class AccountTracker:
         return coroutine()
 
     def get_accounts_whois(self, nicknames, use_cache=True, use_pending=True):
-        accounts_coro = self.bot.gather(*(
+        accounts_coro = gather(*(
             self.get_account(nickname, use_cache, use_pending)
             for nickname in nicknames
         ))
@@ -686,7 +688,7 @@ class AccountTracker:
                 coroutines.add(self.get_accounts(channel, no_self=True))
             if self.is_tracking_id_statuses:
                 coroutines.add(self.get_id_statuses(channel, no_self=True))
-            coroutines and await self.bot.gather(*coroutines)
+            coroutines and await gather(*coroutines)
             return
 
         self.set_tracked(sender)
@@ -701,7 +703,7 @@ class AccountTracker:
         if self.is_tracking_id_statuses:
             if not self.is_id_status_synced(sender):
                 coroutines.add(self.get_id_status(sender))
-        coroutines and await self.bot.gather(*coroutines)
+        coroutines and await gather(*coroutines)
 
     @Event.part
     async def on_part(self, sender, channel, message):
@@ -719,7 +721,7 @@ class AccountTracker:
             return
         coroutines = self.get_coroutines(sender, known=False)
         self.set_untracked(sender)
-        coroutines and await self.bot.gather(*coroutines)
+        coroutines and await gather(*coroutines)
 
     @cast_args
     async def on_left_channel(self, nickname: IStr, channel: IStr):
@@ -734,7 +736,7 @@ class AccountTracker:
         for user in untracked_users:
             coroutines |= self.get_coroutines(user, known=False)
         self.set_untracked(*untracked_users)
-        coroutines and await self.bot.gather(*coroutines)
+        coroutines and await gather(*coroutines)
 
     @Event.command("ACCOUNT")
     async def on_account(self, sender, account):
@@ -751,7 +753,7 @@ class AccountTracker:
             self.is_tracking_id_statuses or self.is_id_status_synced(sender))
         if check_id_status:
             coroutines.add(self.get_id_status(sender, use_cache=False))
-        coroutines and await self.bot.gather(*coroutines)
+        coroutines and await gather(*coroutines)
 
     @Event.nick
     async def on_nick(self, old_nickname, new_nickname):
@@ -770,7 +772,7 @@ class AccountTracker:
         self.set_untracked(old_nickname)
         if check_id_status:
             coroutines.add(self.get_id_status(new_nickname, use_cache=False))
-        coroutines and await self.bot.gather(*coroutines)
+        coroutines and await gather(*coroutines)
 
     def get_coroutines(
             self, user, new_account=NONE, new_id_status=NONE, known=True):

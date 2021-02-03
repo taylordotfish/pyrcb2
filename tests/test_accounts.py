@@ -1,4 +1,4 @@
-# Copyright (C) 2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2016, 2021 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -65,8 +65,8 @@ STATUS_ID_STATUSES = [
 @async_tests
 class TestAccountTracker(BaseBotTest):
     @classmethod
-    def create_bot(cls, loop):
-        bot = super().create_bot(loop)
+    def create_bot(cls):
+        bot = super().create_bot()
         bot.track_known_id_statuses = True
         return bot
 
@@ -225,7 +225,7 @@ class TestAccountTracker(BaseBotTest):
         coroutine = self.bot.get_accounts("#channel")
         coroutine2 = self.bot.get_accounts("#channel")
         self.from_server(*WHOIS_ACCOUNTS)
-        result, result2 = await self.bot.gather(coroutine, coroutine2)
+        result, result2 = await asyncio.gather(coroutine, coroutine2)
         self.assertEqual(result.value, result2.value)
         self.assertEqual(len(self.pop_sent()), 3)  # 3 tracked users
 
@@ -235,7 +235,7 @@ class TestAccountTracker(BaseBotTest):
         coroutine = self.bot.get_accounts("#channel")
         coroutine2 = self.bot.get_accounts("#channel")
         self.from_server(*WHOX_ACCOUNTS)
-        result, result2 = await self.bot.gather(coroutine, coroutine2)
+        result, result2 = await asyncio.gather(coroutine, coroutine2)
         self.assertEqual(result.value, result2.value)
         self.assertEqual(len(self.pop_sent()), 1)  # 1 WHO query
 
@@ -244,7 +244,7 @@ class TestAccountTracker(BaseBotTest):
         coroutine = self.bot.get_id_statuses("#channel")
         coroutine2 = self.bot.get_id_statuses("#channel")
         self.from_server(*ACC_ID_STATUSES)
-        result, result2 = await self.bot.gather(coroutine, coroutine2)
+        result, result2 = await asyncio.gather(coroutine, coroutine2)
         self.assertEqual(result.value, result2.value)
         # 3 tracked users plus 2 messages to discover the NickServ ID command.
         self.assertEqual(len(self.pop_sent()), 5)
@@ -417,8 +417,8 @@ class TestAccountTracker(BaseBotTest):
 
 
 def main():
-    asyncio.set_event_loop(None)
     unittest.main()
+
 
 if __name__ == "__main__":
     main()

@@ -1,4 +1,4 @@
-.. Copyright (C) 2016-2017 taylor.fish <contact@taylor.fish>
+.. Copyright (C) 2016-2017, 2021 taylor.fish <contact@taylor.fish>
 
 .. This file is part of pyrcb2-docs, documentation for pyrcb2.
 
@@ -27,6 +27,7 @@ Release notes
 
 .. toctree::
 
+   0.6
    0.5
    0.4
    0.3

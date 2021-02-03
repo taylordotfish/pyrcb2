@@ -32,4 +32,3 @@ Reference
    messages
    itypes
    other
-   astdio

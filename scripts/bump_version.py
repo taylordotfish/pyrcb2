@@ -47,12 +47,6 @@ def update_readme(version, short_version, dev):
 
         ".. _changelog: https://taylor.fish/pyrcb2"
         "/release-notes/{0}.html".format(short_version),
-
-        # ".. _changelog: https://pythonhosted.org/pyrcb2"
-        # "/release-notes/{0}.html".format(short_version),
-
-        # ".. _changelog: https://pyrcb2.readthedocs.io"
-        # "/en/{0}/release-notes/{0}.html".format(short_version),
     ]
 
     lines = read_lines("README.rst")
@@ -67,12 +61,6 @@ def update_readme(version, short_version, dev):
             del lines[i:i+4]
             break
     desc_index = i
-
-    # for i, line in enumerate(lines):
-    #     lines[i] = re.sub(
-    #         r"(://pyrcb2.readthedocs.io/en/).*?/",
-    #         r"\g<1>%s/" % ("stable" if dev else short_version), line,
-    #     )
 
     write_lines(
         "README.rst", lines[:2] + version_lines + lines[2:desc_index] +

@@ -23,7 +23,6 @@
 # along with pyrcb2.  If not, see <http://www.gnu.org/licenses/>.
 
 from . import tests, test_accounts, test_itypes
-import asyncio
 import sys
 import unittest
 
@@ -31,11 +30,11 @@ MODULES = [tests, test_accounts, test_itypes]
 
 
 def main():
-    asyncio.set_event_loop(None)
     success = True
     for module in MODULES:
         success &= unittest.main(module, exit=False).result.wasSuccessful()
     return not success
+
 
 if __name__ == "__main__":
     sys.exit(main())

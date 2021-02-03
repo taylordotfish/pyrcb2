@@ -1,4 +1,4 @@
-# Copyright (C) 2015-2016 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2015-2016, 2021 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -56,17 +56,19 @@ class BaseMock(mock.Mock):
 class MockReader(BaseMock):
     spec = asyncio.StreamReader
 
-    def __init__(self, loop=None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.wrap_mock("readline")
-        self.lines = asyncio.Queue(loop=loop)
-        self.lines_empty = asyncio.Event(loop=loop)
+        self.reset()
+
+    def reset(self):
+        self.lines = asyncio.Queue()
+        self.lines_empty = asyncio.Event()
         self.alive = True
-        self.loop = loop
 
     def add_line(self, line):
         self.lines.put_nowait(line)
-        self.lines_empty = asyncio.Event(loop=self.loop)
+        self.lines_empty = asyncio.Event()
 
     async def readline(self):
         if not self.alive:
@@ -83,22 +85,21 @@ class MockReader(BaseMock):
 class MockWriter(BaseMock):
     spec = asyncio.StreamWriter
 
-    def __init__(self, clock, reader=None, loop=None, **kwargs):
+    def __init__(self, clock, reader=None, **kwargs):
         super().__init__(**kwargs)
         self.wrap_mock("write", "close")
         self.clock = clock
         self.reader = reader
         self.lines = []
         self.lines_with_time = []
-        self.data_received = asyncio.Event(loop=loop)
-        self.loop = loop
+        self.data_received = asyncio.Event()
 
     def write(self, data):
         line = data.decode().rstrip("\r\n")
         self.lines.append(line)
         self.lines_with_time.append((line, self.clock.time))
         self.data_received.set()
-        self.data_received = asyncio.Event(loop=self.loop)
+        self.data_received = asyncio.Event()
 
     def close(self):
         if self.reader is not None:
@@ -108,14 +109,13 @@ class MockWriter(BaseMock):
 
 
 class MockOpenConnection(BaseMock):
-    def __init__(self, reader, writer, loop=None, **kwargs):
+    def __init__(self, reader, writer, **kwargs):
         super().__init__(side_effect=self._call, **kwargs)
         self.reader = reader
         self.writer = writer
-        self.loop = loop
 
     def _call(self, *args, **kwargs):
-        future = self.loop.create_future()
+        future = asyncio.get_event_loop().create_future()
         future.set_result((self.reader, self.writer))
         return future
 
@@ -138,7 +138,7 @@ class MockAsyncSleep(BaseMock):
         super().__init__(side_effect=self._call, **kwargs)
         self.clock = clock
 
-    def _call(self, delay, result=None, *, loop=None):
+    def _call(self, delay, result=None):
         # Keep asyncio.sleep()'s original behavior if delay is 0.
         if delay == 0:
             @asyncio.coroutine
@@ -147,7 +147,6 @@ class MockAsyncSleep(BaseMock):
             return coroutine()
 
         self.clock.time += delay
-        loop = loop or asyncio.get_event_loop()
-        future = loop.create_future()
+        future = asyncio.get_event_loop().create_future()
         future.set_result(result)
         return future

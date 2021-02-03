@@ -1,4 +1,4 @@
-# Copyright (C) 2016-2017 taylor.fish <contact@taylor.fish>
+# Copyright (C) 2016-2017, 2021 taylor.fish <contact@taylor.fish>
 #
 # This file is part of pyrcb2.
 #
@@ -31,13 +31,12 @@ from .messages import WaitResult, MultiWaitResult, WaitError, WhoisReply
 from .pyrcb2 import IRCBot
 from .utils import OptionalCoroutine
 from . import accounts
-from . import astdio
 from . import decorators
 from . import messages
 from . import numerics
 from . import utils
 
-__version__ = "0.5.4-dev"
+__version__ = "0.6.0"
 
 # Silence Pyflakes warnings about unused imports.
 assert [Status]
@@ -48,4 +47,4 @@ assert [Message, Reply, Error, ANY, ANY_ARGS, SELF]
 assert [WaitResult, MultiWaitResult, WaitError, WhoisReply]
 assert [IRCBot]
 assert [OptionalCoroutine]
-assert [accounts, astdio, decorators, messages, numerics, utils]
+assert [accounts, decorators, messages, numerics, utils]

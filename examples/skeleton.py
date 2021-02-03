@@ -9,6 +9,7 @@
 # CC0 Public Domain Dedication.
 
 from pyrcb2 import IRCBot, Event
+import asyncio
 
 
 class MyBot:
@@ -17,19 +18,18 @@ class MyBot:
         self.bot = IRCBot(log_communication=True)
         self.bot.load_events(self)
 
-    def start(self):
-        self.bot.call_coroutine(self.start_async())
-
-    async def start_async(self):
-        await self.bot.connect("irc.example.com", 6667)
-        await self.bot.register("nickname")
-        # More code here (optional)...
-        await self.bot.listen()
+    async def run(self):
+        async def init():
+            await self.bot.connect("irc.example.com", 6667)
+            await self.bot.register("nickname")
+            # More code here (optional)...
+        await self.bot.run(init())
 
 
-def main():
+async def main():
     mybot = MyBot()
-    mybot.start()
+    await mybot.run()
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

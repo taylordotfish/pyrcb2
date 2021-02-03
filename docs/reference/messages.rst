@@ -152,11 +152,6 @@ WhoisReply
 
       :type: `str`
 
-   .. attribute:: username
-      :annotation: = None
-
-      :type: `str`
-
    .. attribute:: is_irc_op
       :annotation: = False
 

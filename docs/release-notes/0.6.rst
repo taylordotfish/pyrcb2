@@ -1,0 +1,76 @@
+.. Copyright (C) 2017-2018, 2021 taylor.fish <contact@taylor.fish>
+
+.. This file is part of pyrcb2-docs, documentation for pyrcb2.
+
+.. pyrcb2-docs is licensed under the GNU Lesser General Public License
+   as published by the Free Software Foundation, either version 3 of
+   the License, or (at your option) any later version.
+
+.. As an additional permission under GNU GPL version 3 section 7, you
+   may distribute non-source forms of pyrcb2-docs without the copy of
+   the GNU GPL normally required by section 4, provided you include a
+   URL through which recipients can obtain a copy of the Corresponding
+   Source and the GPL at no charge.
+
+.. pyrcb2-docs is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Lesser General Public License for more details.
+
+.. You should have received a copy of the GNU Lesser General Public License
+   along with pyrcb2-docs.  If not, see <http://www.gnu.org/licenses/>.
+
+.. currentmodule:: pyrcb2
+
+Version 0.6
+===========
+
+Changelog
+---------
+
+.. _changelog-0.6.0:
+
+0.6.0
+~~~~~
+
+* pyrcb2 now works with newer versions of Python.
+
+**Breaking changes:**
+
+* pyrcb2 now requires Python 3.7 or later.
+
+* The blocking versions of :meth:`IRCBot.connect`, :meth:`IRCBot.register`,
+  :meth:`IRCBot.sasl_auth` These methods are now coroutines and must be called
+  from async code.
+
+* :meth:`IRCBot.run` must now be called and awaited before other methods like
+  :meth:`~IRCBot.connect` and :meth:`~IRCBot.register` are used. Instead, those
+  methods should be called by the coroutine passed to :meth:`IRCBot.run`.
+
+* ``IRCBot.call_coroutine()`` has been removed. For limited backward
+  compatibility, it is now an alias of :func:`IRCBot.run_blocking`.
+
+* ``IRCBot.schedule_coroutine()`` has been removed. If you want to run a
+  coroutine in the background while the bot runs, simply await it in the
+  coroutine passed to :meth:`IRCBot.run`. You can use :func:`asyncio.gather`
+  to run multiple coroutines concurrently.
+
+* ``IRCBot.listen()`` has been removed. If you want to wait until the bot is
+  disconnected, you can use :meth:`IRCBot.wait_until_disconnected`, but it is
+  not necessary to call this function like it was with `listen()`. (In
+  particular, if the coroutine passed to :meth:`IRCBot.run` returns, the bot
+  keeps running.) For limited backward compatibility, ``listen()`` is
+  now an alias of :meth:`~IRCBot.wait_until_disconnected`.
+
+* The ``loop`` parameter in `IRCBot` has been removed. If
+  you want to use a custom event loop, set it as the current event loop before
+  creating and running an `IRCBot`.
+
+* The ``astdio`` module has been removed. Use ``aprint()``
+  and ``ainput()`` from `aioconsole <https://pypi.org/project/aioconsole/>`_
+  instead. For limited backward compatibility, ``astdio`` has been replaced
+  with a wrapper around aioconsole.
+
+* ``IRCBot.quit_on_exit`` and ``IRCBot.quit_on_exception`` have been replaced
+  with `IRCBot.ensure_quit`. For limited backward compatibility, the old names
+  are now aliases of `IRCBot.ensure_quit`.
