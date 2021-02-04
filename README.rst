@@ -73,7 +73,7 @@ To run pyrcb2's tests, run ``python3 -m tests``. If you have `coverage`_
 installed, you can run ``coverage run -m tests.__main__`` to get information
 on test coverage.
 
-.. _coverage: https://pypi.python.org/pypi/coverage/
+.. _coverage: https://pypi.org/project/coverage
 
 
 License
