@@ -27,7 +27,8 @@ from setuptools import setup
 import os
 
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(SCRIPT_DIR, "misc/pypi-description.rst")) as f:
+DESCRIPTION_URL = os.path.join(SCRIPT_DIR, "misc/pypi-description.rst")
+with open(DESCRIPTION_URL, encoding="utf8") as f:
     LONG_DESCRIPTION = f.read()
 
 setup(

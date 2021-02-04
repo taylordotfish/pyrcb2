@@ -88,7 +88,7 @@ def main():
             for i in range(start, end + 1):
                 code_point_break_map[i] = BREAK_MAP[break_val]
 
-    with open(OUTPUT, "w") as f:
+    with open(OUTPUT, "w", encoding="utf8") as f:
         print(OUTPUT_HEADER.format(copyright_line), file=f)
         print("break_table = [", file=f)
         for row in BREAK_TABLE:

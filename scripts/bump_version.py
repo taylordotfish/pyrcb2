@@ -25,13 +25,13 @@ ROOT_DIR = os.path.join(SCRIPT_DIR, "..")
 
 def read_lines(rel_path):
     abs_path = os.path.join(ROOT_DIR, rel_path)
-    with open(abs_path) as f:
+    with open(abs_path, encoding="utf8") as f:
         return f.read().splitlines()
 
 
 def write_lines(rel_path, lines):
     abs_path = os.path.join(ROOT_DIR, rel_path)
-    with open(abs_path, "w") as f:
+    with open(abs_path, "w", encoding="utf8") as f:
         for line in lines:
             print(line, file=f)
 
