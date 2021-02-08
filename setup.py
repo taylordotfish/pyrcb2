@@ -54,4 +54,5 @@ setup(
     ],
     keywords="irc bot asyncio",
     packages=["pyrcb2"],
+    python_requires=">=3.7",
 )
