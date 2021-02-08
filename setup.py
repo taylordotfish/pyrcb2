@@ -33,7 +33,7 @@ with open(DESCRIPTION_URL, encoding="utf8") as f:
 
 setup(
     name="pyrcb2",
-    version="0.6.2",
+    version="0.6.3-dev",
     description="An asyncio-based IRC bot library.",
     long_description=LONG_DESCRIPTION,
     url="https://github.com/taylordotfish/pyrcb2",
