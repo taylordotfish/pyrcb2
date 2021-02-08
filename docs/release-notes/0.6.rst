@@ -28,6 +28,14 @@ Version 0.6
 Changelog
 ---------
 
+.. _changelog-0.6.2:
+
+0.6.2
+~~~~~
+
+* ``setup.py`` now passes ``python_requires`` to ``setup()``.
+* Minor documentation updates.
+
 .. _changelog-0.6.1:
 
 0.6.1
